@@ -1,21 +1,19 @@
 {
   "name": "blogger-cannibalization-ai",
-  "version": "2.0.0-alpha.1",
+  "version": "2.0.0-alpha.2",
   "private": true,
   "type": "module",
-  "description": "Multi-tenant SaaS MVP for Blogger SEO cannibalization analysis and approved content updates",
-  "engines": {
-    "node": ">=20"
-  },
+  "description": "Multi-tenant Blogger cannibalization analysis SaaS alpha",
+  "engines": {"node": ">=20"},
   "scripts": {
     "start": "node src/index.js",
     "test": "node --test",
-    "check": "node --check src/index.js && node --check src/security.js && node --check src/analysis.js && node --check src/blogger.js && node --check src/routes.js"
+    "check": "node --check src/index.js && node --check src/routes.js && node --check src/blogger.js && node --check src/security.js && node --check src/analysis.js && node --check src/db.js"
   },
   "dependencies": {
+    "cookie-parser": "^1.4.7",
     "express": "^4.21.2",
     "googleapis": "^144.0.0",
-    "pg": "^8.13.1",
-    "cookie-parser": "^1.4.7"
+    "pg": "^8.13.1"
   }
 }

@@ -1,18 +1,14 @@
-# Security and launch checklist — mandatory before production
+# Checklist obrigatório antes de produção
 
-- [ ] Fix refresh-token lifecycle: persist newly refreshed credentials safely and handle revoked/expired consent.
-- [ ] Add OAuth disconnect and token revocation/deletion.
-- [ ] Add CSRF tokens to all POST/PUT/DELETE routes; same-site cookies alone are not the complete CSRF strategy.
-- [ ] Add per-IP and per-user rate limits and request-size limits.
-- [ ] Enforce strict tenant ownership in every query and test cross-tenant denial.
-- [ ] Add HTML sanitization and a visual diff; preserve Blogger-specific markup/widgets.
-- [ ] Make apply + backup state transition recoverable if Blogger succeeds but DB update fails.
-- [ ] Implement restore endpoint and test round-trip restore.
-- [ ] Validate Blogger post version/updated timestamp immediately before applying to prevent overwriting newer edits.
-- [ ] Add pagination caps, timeouts, retries/backoff and quota handling.
-- [ ] Add audit trail for OAuth, sync, proposals, approvals and restores.
-- [ ] Add database migrations with version tracking and backup/restore procedures.
-- [ ] Add automated integration tests against a dedicated test blog and OAuth test project.
-- [ ] Complete privacy policy, terms, data retention/deletion, LGPD process and support contact.
-- [ ] Add subscription/billing only after core product/security validation.
-- [ ] Review OAuth scopes and Google verification requirements before public launch.
+- [ ] Instalar dependências e executar `npm test` e `npm run check`.
+- [ ] Executar testes de integração com projeto Google e blog de teste.
+- [ ] Testar isolamento entre dois usuários em todas as rotas.
+- [ ] Revisão independente das rotas de aprovação e restauração.
+- [ ] Adicionar fila/reconciliação para falhas entre Blogger e PostgreSQL.
+- [ ] Implementar sanitização e diff HTML seguro, preservando widgets Blogger.
+- [ ] Substituir rate limit em memória por solução compartilhada.
+- [ ] Adicionar timeout, retry/backoff e monitoramento.
+- [ ] Criar política de privacidade, termos, retenção/exclusão e processo LGPD.
+- [ ] Revisar escopos e requisitos de verificação OAuth do Google.
+- [ ] Configurar backups do PostgreSQL e testar restauração.
+- [ ] Só então avaliar implantação e abertura para usuários.

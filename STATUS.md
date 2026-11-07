@@ -1,9 +1,16 @@
-# Build status
+# Status — v2.0 alpha.2
 
-This is a newly assembled v2.0 alpha scaffold based on the v2 product specification and the recovered v1 source. It is not the missing original Kimi v2 source and must not be represented as that source.
+Reconstrução corrigida preparada para auditoria e testes. Não representa a versão original Kimi v2.
 
-Implemented in this scaffold: OAuth entry/callback, encrypted token storage, PostgreSQL schema, per-user session records, blog/post sync, heuristic analysis, proposal staging and explicit approval endpoint, basic dashboard, Docker and Render descriptors.
+Melhorias em relação ao alpha.1:
+- Corrigida a separação entre ID interno do blog e ID do Blogger.
+- Persistência de tokens renovados pelo cliente OAuth.
+- Preservação do refresh token quando o Google não devolve um novo.
+- Proteção CSRF para rotas de alteração.
+- Limite básico de requisições.
+- Auditoria de eventos.
+- Rota de restauração de backup.
+- Checagem básica de alteração remota antes de aprovar.
+- `.env.example`, `.gitignore` e `.dockerignore` na raiz.
 
-Not completed/verified: full security review, automated migration versioning, complete restore path, OAuth refresh lifecycle, CSRF/rate limits, tenant-isolation test suite, end-to-end Blogger write test, Search Console, billing, production monitoring, LGPD/legal documents, deployment.
-
-No production deploy performed. No credentials included. No claim that production tests passed.
+Não implantado. Não conectado a banco de produção. Não validado com conta Blogger real.
