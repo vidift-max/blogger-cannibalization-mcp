@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS oauth_tokens (
 CREATE TABLE IF NOT EXISTS user_sessions (
   id_hash TEXT PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  csrf_hash TEXT NOT NULL,
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -51,12 +52,20 @@ CREATE TABLE IF NOT EXISTS post_backups (
   proposed_html TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('pending','applied','restored','rejected')) DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  applied_at TIMESTAMPTZ
+  applied_at TIMESTAMPTZ,
+  restored_at TIMESTAMPTZ
 );
 CREATE TABLE IF NOT EXISTS analysis_runs (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
   blog_id BIGINT NOT NULL REFERENCES blogs(id) ON DELETE CASCADE,
   result JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS audit_events (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT REFERENCES app_users(id) ON DELETE SET NULL,
+  event_type TEXT NOT NULL,
+  details JSONB NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
