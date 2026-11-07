@@ -1,5 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { analyzePosts } from '../src/analysis.js';
-test('detects similar article titles as possible cannibalization',()=>{const out=analyzePosts([{id:1,title:'Best savings account for students',content_text:'Compare savings account rates for students'},{id:2,title:'Best savings accounts for students',content_text:'Savings account rates and student banking comparison'}]);assert.ok(out.length>0);assert.ok(out[0].score>=0.18);});
-test('does not flag unrelated posts',()=>{const out=analyzePosts([{id:1,title:'How to bake sourdough bread',content_text:'Flour yeast starter'},{id:2,title:'Best hiking trails in winter',content_text:'Boots snow mountains'}]);assert.equal(out.length,0);});
+test('identifica títulos e conteúdos semelhantes como possível conflito', () => {
+  const out = analyzePosts([
+    { id: 1, title: 'Melhores contas digitais para estudantes', content_text: 'Comparação de contas digitais para estudantes e tarifas' },
+    { id: 2, title: 'Melhores contas digitais para estudantes', content_text: 'Contas digitais, tarifas e comparação para estudantes' }
+  ]);
+  assert.ok(out.length > 0);
+  assert.ok(out[0].score >= 0.18);
+});
+test('não sinaliza artigos sem relação textual', () => {
+  const out = analyzePosts([
+    { id: 1, title: 'Como fazer pão de fermentação natural', content_text: 'Farinha, água e fermento' },
+    { id: 2, title: 'Trilhas para caminhar no inverno', content_text: 'Montanhas, botas e neve' }
+  ]);
+  assert.equal(out.length, 0);
+});
