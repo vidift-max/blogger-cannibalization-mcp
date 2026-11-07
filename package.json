@@ -1,0 +1,22 @@
+{
+  "name": "blogger-cannibalization-mcp",
+  "version": "1.0.0",
+  "description": "Servidor MCP somente-leitura: feed público Blogger → índice SQLite → análise de canibalização para ChatGPT",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "smoke": "node scripts/smoke.js",
+    "test": "node --test test/parser.test.js test/analysis.test.js",
+    "test:live": "RUN_LIVE=1 node --test test/feed.test.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "better-sqlite3": "^11.10.0",
+    "dotenv": "^16.4.7",
+    "fast-xml-parser": "^4.5.1",
+    "node-html-parser": "^6.1.13",
+    "zod": "^3.24.1"
+  }
+}
