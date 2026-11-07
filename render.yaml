@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: blogger-cannibalization-mcp
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: BLOG_URL
+        value: https://www.statesidemoney.com
+      - key: DB_PATH
+        value: ./data/index.db
+      - key: FEED_PAGE_SIZE
+        value: "25"
+      - key: REFRESH_TTL_MS
+        value: "900000"
+      - key: FULL_SYNC_INTERVAL_MS
+        value: "86400000"
+      - key: CONTENT_MAX_CHARS
+        value: "12000"
+      - key: MCP_AUTH_TOKEN
+        sync: false
