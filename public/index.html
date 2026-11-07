@@ -1,1 +1,53 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Blogger Cannibalization AI</title><style>body{font:16px system-ui;background:#f5f6fa;color:#18202b;margin:0}.wrap{max-width:900px;margin:40px auto;padding:20px}.card{background:white;border:1px solid #e1e5ec;border-radius:14px;padding:22px;margin:14px 0}button,a.btn{background:#175cd3;color:white;border:0;border-radius:8px;padding:12px 16px;text-decoration:none;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}.muted{color:#667085}</style></head><body><main class="wrap"><h1>Blogger Cannibalization AI</h1><p class="muted">Analise conflitos de palavras-chave e controle as alterações no seu Blogger.</p><section class="card" id="auth"><h2>Conecte sua conta Google</h2><p>A autorização permite listar blogs e posts. Nenhum artigo será alterado sem sua aprovação.</p><a class="btn" href="/api/auth/google">Conectar com Google</a></section><section class="card" id="app" hidden><h2>Seus blogs</h2><button id="load">Carregar blogs</button><div id="blogs"></div><pre id="result"></pre><button id="logout">Sair</button></section></main><script>async function api(path,opts={}){let r=await fetch('/api'+path,{...opts,headers:{'content-type':'application/json',...(opts.headers||{})}});let j=await r.json();if(!r.ok)throw Error(j.error||'Erro');return j}async function init(){try{let m=await api('/me');document.querySelector('#auth').hidden=true;document.querySelector('#app').hidden=false;document.querySelector('#load').onclick=async()=>{try{let x=await api('/blogs');document.querySelector('#blogs').innerHTML=x.blogs.map(b=>`<div class="card"><b>${escapeHtml(b.name)}</b><p>${escapeHtml(b.url)}</p><button data-id="${b.id}" class="sync">Sincronizar e analisar</button></div>`).join('');document.querySelectorAll('.sync').forEach(btn=>btn.onclick=async()=>{try{let s=await api(`/blogs/${btn.dataset.id}/sync`,{method:'POST'});let a=await api(`/blogs/${btn.dataset.id}/analyze`,{method:'POST'});document.querySelector('#result').textContent=JSON.stringify({sincronizados:s.synced,conflitos:a.findings},null,2)}catch(e){alert(e.message)}})}catch(e){alert(e.message)}};document.querySelector('#logout').onclick=async()=>{await api('/auth/logout',{method:'POST'});location.reload()}}catch{}}function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}init();</script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blogger Cannibalization AI</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#172033;background:#f4f6fa}body{margin:0}.wrap{max-width:980px;margin:32px auto;padding:18px}.card{background:#fff;border:1px solid #e1e5ec;border-radius:14px;padding:20px;margin:14px 0}button,.btn{background:#175cd3;color:white;border:0;border-radius:8px;padding:11px 15px;text-decoration:none;cursor:pointer;display:inline-block;margin:4px 4px 4px 0}button.secondary{background:#475467}.muted{color:#667085}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f8fafc;padding:12px;border-radius:8px}.blog{border-top:1px solid #eaecf0;padding:12px 0}.status{padding:8px 0}
+</style>
+</head>
+<body><main class="wrap">
+<h1>Blogger Cannibalization AI</h1>
+<p class="muted">Encontre possíveis conflitos entre artigos e revise cada alteração antes de publicar.</p>
+<section class="card" id="auth"><h2>Conecte sua conta Google</h2><p>A autorização permite acessar seus blogs e artigos. Nenhum conteúdo será alterado sem aprovação.</p><a class="btn" href="/api/auth/google">Conectar com Google</a></section>
+<section class="card" id="app" hidden>
+<h2>Seus blogs</h2><p id="welcome" class="muted"></p><button id="load">Carregar blogs</button><button id="logout" class="secondary">Sair</button>
+<div id="blogs"></div><h2>Resultado da análise</h2><pre id="result">Sincronize um blog para começar.</pre>
+<h2>Propostas e backups</h2><button id="proposals" class="secondary">Ver propostas</button><div id="proposalList"></div>
+</section></main>
+<script>
+let csrf='';
+async function api(path,opts={}) {
+ const headers={'content-type':'application/json',...(opts.headers||{})};
+ if(opts.method && opts.method!=='GET' && csrf) headers['x-csrf-token']=csrf;
+ const r=await fetch('/api'+path,{...opts,headers});
+ const data=await r.json().catch(()=>({}));
+ if(!r.ok) throw Error(data.message||data.error||'Falha na solicitação');
+ return data;
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function init(){
+ try{
+  const me=await api('/me');csrf=me.csrf||'';document.querySelector('#auth').hidden=true;document.querySelector('#app').hidden=false;
+  document.querySelector('#welcome').textContent='Conectado como '+me.user.email;
+ }catch{return;}
+}
+document.querySelector('#load').onclick=async()=>{
+ try{
+  const data=await api('/blogs');
+  document.querySelector('#blogs').innerHTML=data.blogs.map(b=>`<div class="blog"><b>${esc(b.name)}</b><p>${esc(b.url)}</p><button data-id="${b.id}" class="sync">Sincronizar e analisar</button></div>`).join('');
+  document.querySelectorAll('.sync').forEach(btn=>btn.onclick=async()=>{
+   try{const s=await api(`/blogs/${btn.dataset.id}/sync`,{method:'POST'});const a=await api(`/blogs/${btn.dataset.id}/analyze`,{method:'POST'});document.querySelector('#result').textContent=JSON.stringify({artigosSincronizados:s.synced,observacao:a.note,possiveisConflitos:a.findings},null,2);}
+   catch(e){alert(e.message);}
+  });
+ }catch(e){alert(e.message);}
+};
+document.querySelector('#proposals').onclick=async()=>{
+ try{const d=await api('/proposals');document.querySelector('#proposalList').innerHTML=d.proposals.map(p=>`<div class="blog"><b>${esc(p.title)}</b><p>Status: ${esc(p.status)} — proposta ${p.id}</p>${p.status==='applied'?`<button class="restore" data-id="${p.id}">Restaurar backup</button>`:''}</div>`).join('')||'<p>Nenhuma proposta.</p>';
+ document.querySelectorAll('.restore').forEach(b=>b.onclick=async()=>{if(!confirm('Restaurar o conteúdo anterior deste artigo no Blogger?'))return;try{await api(`/proposals/${b.dataset.id}/restore`,{method:'POST'});alert('Solicitação de restauração concluída.');document.querySelector('#proposals').click();}catch(e){alert(e.message);}});
+ }catch(e){alert(e.message);}
+};
+document.querySelector('#logout').onclick=async()=>{try{await api('/auth/logout',{method:'POST'});location.reload();}catch(e){alert(e.message);}};
+init();
+</script></body></html>
