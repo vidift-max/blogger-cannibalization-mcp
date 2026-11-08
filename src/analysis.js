@@ -1,12 +1,13 @@
-
 const STOP = new Set(`
 the a an and or for to of in on with from by is are was were
 how what when where why your you best guide review vs about
-into over under after before beginner beginners beginners
+into over under after before beginner beginners starting start
+basics intro
 para com uma um de da do das dos que como por em no na nos
 nas seu sua seus suas sobre entre para pelo pela pelos pelas
-artigo artigos guia melhor melhores como porque
+artigo artigos guia melhor melhores porque
 `.split(/\s+/).filter(Boolean));
+
 
 const INTENT_GROUPS = [
   new Set(['beginner', 'beginners', 'starting', 'start', 'basics', 'intro']),
@@ -16,6 +17,130 @@ const INTENT_GROUPS = [
   new Set(['how', 'tutorial', 'steps', 'setup', 'install']),
   new Set(['benefits', 'advantages', 'disadvantages', 'risks', 'pros', 'cons'])
 ];
+
+
+/*
+ * TÓPICOS PRINCIPAIS
+ *
+ * O objetivo é diferenciar artigos que pertencem
+ * ao mesmo universo financeiro, mas possuem assuntos
+ * principais diferentes.
+ */
+const TOPIC_GROUPS = [
+  {
+    id: 'credit_card',
+    terms: [
+      'credit card',
+      'credit cards',
+      'card debt',
+      'credit card debt',
+      'card balance',
+      'card balances',
+      'cardholder',
+      'cardholders'
+    ]
+  },
+
+  {
+    id: 'personal_loan',
+    terms: [
+      'personal loan',
+      'personal loans',
+      'unsecured personal loan',
+      'unsecured personal loans',
+      'loan borrowing',
+      'loan borrower',
+      'loan borrowers'
+    ]
+  },
+
+  {
+    id: 'mortgage',
+    terms: [
+      'mortgage',
+      'mortgages',
+      'home loan',
+      'home loans',
+      'housing loan'
+    ]
+  },
+
+  {
+    id: 'auto_loan',
+    terms: [
+      'auto loan',
+      'auto loans',
+      'car loan',
+      'car loans',
+      'vehicle loan',
+      'vehicle loans'
+    ]
+  },
+
+  {
+    id: 'student_loan',
+    terms: [
+      'student loan',
+      'student loans',
+      'student debt'
+    ]
+  },
+
+  {
+    id: 'credit_score',
+    terms: [
+      'credit score',
+      'credit scores',
+      'fico score',
+      'fico scores'
+    ]
+  },
+
+  {
+    id: 'credit_report',
+    terms: [
+      'credit report',
+      'credit reports',
+      'credit reporting'
+    ]
+  },
+
+  {
+    id: 'debt',
+    terms: [
+      'debt',
+      'debts',
+      'debt consolidation',
+      'debt relief',
+      'consumer debt',
+      'household debt'
+    ]
+  },
+
+  {
+    id: 'banking',
+    terms: [
+      'bank',
+      'banks',
+      'banking',
+      'checking account',
+      'savings account',
+      'savings accounts'
+    ]
+  },
+
+  {
+    id: 'interest_rates',
+    terms: [
+      'interest rate',
+      'interest rates',
+      'fed rate',
+      'federal funds rate',
+      'rate decision'
+    ]
+  }
+];
+
 
 function normalize(text) {
   return String(text || '')
@@ -33,15 +158,18 @@ function normalize(text) {
     .trim();
 }
 
+
 function words(text) {
   return normalize(text)
     .split(/\s+/)
     .filter(w => w.length >= 3 && !STOP.has(w));
 }
 
+
 function uniqueWords(text) {
   return [...new Set(words(text))];
 }
+
 
 function jaccard(a, b) {
   const A = new Set(a);
@@ -58,6 +186,7 @@ function jaccard(a, b) {
   return intersection / (A.size + B.size - intersection);
 }
 
+
 function containment(a, b) {
   const A = new Set(a);
   const B = new Set(b);
@@ -73,6 +202,7 @@ function containment(a, b) {
   return intersection / Math.min(A.size, B.size);
 }
 
+
 function phrases(tokens) {
   const result = new Set();
 
@@ -83,12 +213,14 @@ function phrases(tokens) {
   return result;
 }
 
+
 function sharedPhrases(a, b) {
   const A = phrases(a);
   const B = phrases(b);
 
   return [...A].filter(phrase => B.has(phrase));
 }
+
 
 function intentGroups(tokens) {
   return INTENT_GROUPS
@@ -98,6 +230,7 @@ function intentGroups(tokens) {
     }))
     .filter(item => item.words.length);
 }
+
 
 function intentDifference(a, b) {
   const A = intentGroups(a);
@@ -116,6 +249,76 @@ function intentDifference(a, b) {
   return different && !shared ? 0.22 : 0;
 }
 
+
+/*
+ * Detecta os principais tópicos de um artigo.
+ */
+function detectTopics(text) {
+  const normalized = normalize(text);
+
+  return TOPIC_GROUPS
+    .map(group => {
+      const matches = group.terms.filter(term =>
+        normalized.includes(term)
+      );
+
+      return {
+        id: group.id,
+        matches
+      };
+    })
+    .filter(group => group.matches.length);
+}
+
+
+/*
+ * Compara os tópicos dos dois artigos.
+ */
+function compareTopics(a, b) {
+  const topicsA = detectTopics(a);
+  const topicsB = detectTopics(b);
+
+  const idsA = new Set(topicsA.map(x => x.id));
+  const idsB = new Set(topicsB.map(x => x.id));
+
+  const shared = topicsA
+    .filter(x => idsB.has(x.id))
+    .map(x => x.id);
+
+  const onlyA = topicsA
+    .filter(x => !idsB.has(x.id))
+    .map(x => x.id);
+
+  const onlyB = topicsB
+    .filter(x => !idsA.has(x.id))
+    .map(x => x.id);
+
+  return {
+    topicsA: topicsA.map(x => x.id),
+    topicsB: topicsB.map(x => x.id),
+    shared,
+    onlyA,
+    onlyB
+  };
+}
+
+
+/*
+ * Mede se os artigos possuem tópicos principais diferentes.
+ */
+function topicDifference(topicInfo) {
+  if (
+    topicInfo.onlyA.length &&
+    topicInfo.onlyB.length &&
+    !topicInfo.shared.length
+  ) {
+    return 0.28;
+  }
+
+  return 0;
+}
+
+
 function articleText(post) {
   return [
     post.title || '',
@@ -123,7 +326,9 @@ function articleText(post) {
   ].join(' ');
 }
 
+
 function comparePosts(a, b) {
+
   const titleA = uniqueWords(a.title);
   const titleB = uniqueWords(b.title);
 
@@ -138,6 +343,14 @@ function comparePosts(a, b) {
 
   const titleSimilarity = jaccard(titleA, titleB);
   const titleContainment = containment(titleA, titleB);
+
+  /*
+   * A similaridade do corpo possui peso menor.
+   *
+   * Dois artigos financeiros naturalmente podem
+   * compartilhar muitas palavras sem disputar
+   * a mesma intenção de busca.
+   */
   const bodySimilarity = jaccard(bodyA, bodyB);
 
   const titleEvidence = Math.max(
@@ -149,91 +362,202 @@ function comparePosts(a, b) {
 
   const difference = intentDifference(titleA, titleB);
 
+  const topicInfo = compareTopics(
+    `${a.title || ''} ${a.content_text || a.content_html || ''}`,
+    `${b.title || ''} ${b.content_text || b.content_html || ''}`
+  );
+
+  const topicDiff = topicDifference(topicInfo);
+
+
+  /*
+   * Peso principal:
+   *
+   * título        70%
+   * corpo         12%
+   * frases        18%
+   *
+   * Depois aplicamos as diferenças de intenção
+   * e de tópico.
+   */
   let score =
-    titleEvidence * 0.65 +
-    bodySimilarity * 0.20 +
-    phraseEvidence * 0.15 -
-    difference;
+    titleEvidence * 0.70 +
+    bodySimilarity * 0.12 +
+    phraseEvidence * 0.18 -
+    difference -
+    topicDiff;
+
 
   score = Math.max(0, Math.min(1, score));
+
 
   const enoughSharedTerms = sharedTerms.length >= 2;
   const hasSharedPhrase = shared.length >= 1;
 
-  // Uma palavra genérica em comum não é suficiente.
+
+  /*
+   * Uma palavra genérica em comum não é suficiente.
+   */
   if (!enoughSharedTerms && !hasSharedPhrase) {
     score = Math.min(score, 0.25);
   }
 
+
+  /*
+   * Se os tópicos principais são diferentes,
+   * impedimos que a similaridade geral do corpo
+   * transforme o par automaticamente em HIGH.
+   */
+  const differentMainTopics =
+    topicInfo.onlyA.length &&
+    topicInfo.onlyB.length &&
+    !topicInfo.shared.length;
+
+
+  if (differentMainTopics) {
+    score = Math.min(score, 0.44);
+  }
+
+
   let classification = null;
   let risk = null;
+
 
   if (
     score >= 0.72 &&
     (enoughSharedTerms || shared.length >= 2)
   ) {
+
     classification = 'canibalizacao_provavel';
     risk = 'HIGH';
+
   } else if (
     score >= 0.48 &&
     (enoughSharedTerms || hasSharedPhrase)
   ) {
+
     classification = 'possivel_conflito';
     risk = 'MEDIUM';
   }
 
+
+  let recommendation;
+
+
+  if (classification === 'canibalizacao_provavel') {
+
+    recommendation =
+      'Há sinais fortes de possível canibalização. Compare a intenção de busca, as consultas e as páginas no Search Console antes de consolidar, redirecionar ou alterar qualquer artigo.';
+
+  } else if (classification === 'possivel_conflito') {
+
+    recommendation =
+      'Há alguma sobreposição temática, mas isso não prova canibalização. Revise a intenção de busca, o tópico principal e os dados do Search Console. Se os tópicos principais forem diferentes, preserve os artigos como conteúdos especializados.';
+
+  } else {
+
+    recommendation =
+      'Não há evidências textuais suficientes de que os artigos disputem a mesma intenção de busca.';
+  }
+
+
   return {
+
     score: Number(score.toFixed(3)),
+
     classification,
+
     risk,
+
     shared_terms: sharedTerms.slice(0, 15),
+
     shared_phrases: shared.slice(0, 10),
-    title_similarity: Number(titleSimilarity.toFixed(3)),
-    body_similarity: Number(bodySimilarity.toFixed(3)),
-    intent_difference: difference > 0,
-    recommendation:
-      classification === 'canibalizacao_provavel'
-        ? 'Investigue se os artigos disputam a mesma consulta no Google. Compare consultas, páginas e posições no Search Console antes de consolidar ou alterar qualquer artigo.'
-        : classification === 'possivel_conflito'
-          ? 'Revise a intenção de busca, as palavras-chave principais e os resultados do Search Console. A semelhança textual ainda não comprova canibalização.'
-          : 'Não há evidências textuais suficientes para recomendar uma alteração.'
+
+    title_similarity:
+      Number(titleSimilarity.toFixed(3)),
+
+    body_similarity:
+      Number(bodySimilarity.toFixed(3)),
+
+    intent_difference:
+      difference > 0,
+
+    topic_difference:
+      topicDiff > 0,
+
+    topics_a:
+      topicInfo.topicsA,
+
+    topics_b:
+      topicInfo.topicsB,
+
+    shared_topics:
+      topicInfo.shared,
+
+    different_topics:
+      [
+        ...new Set([
+          ...topicInfo.onlyA,
+          ...topicInfo.onlyB
+        ])
+      ],
+
+    recommendation
+
   };
 }
 
+
 export function analyzePosts(posts) {
+
   const findings = [];
 
   if (!Array.isArray(posts) || posts.length < 2) {
     return findings;
   }
 
+
   for (let i = 0; i < posts.length; i++) {
+
     for (let j = i + 1; j < posts.length; j++) {
+
       const a = posts[i];
       const b = posts[j];
 
       const result = comparePosts(a, b);
 
-      // Só apresenta pares que merecem investigação.
+      /*
+       * Só apresenta pares que merecem investigação.
+       */
       if (!result.classification) continue;
 
+
       findings.push({
+
         ...result,
+
         posts: [
+
           {
             id: a.id,
             title: a.title,
             url: a.url
           },
+
           {
             id: b.id,
             title: b.title,
             url: b.url
           }
+
         ]
+
       });
     }
   }
 
-  return findings.sort((a, b) => b.score - a.score);
-}
+
+  return findings.sort(
+    (a, b) => b.score - a.score
+  );
+      }
