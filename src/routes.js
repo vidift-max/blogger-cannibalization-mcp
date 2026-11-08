@@ -17,6 +17,7 @@ import {
   oauthClient,
   listBlogs,
   listPosts,
+  listPages,
   getPost,
   updatePost
 } from './blogger.js';
@@ -446,6 +447,69 @@ router.get('/blogs', currentUser, async (req, res, next) => {
   }
 });
 
+/*
+ * FEED COMPLETO PARA COMPARTILHAMENTO COM CHATGPT
+ * GET /api/blogs/:blogId/share-feed
+ *
+ * Busca todos os artigos e todas as páginas diretamente do Blogger.
+ * Esta rota somente lê o conteúdo. Não publica nem altera nada.
+ */
+router.get(
+  '/blogs/:blogId/share-feed',
+  currentUser,
+  async (req, res, next) => {
+    try {
+      const owned = await query(
+        `SELECT blogger_blog_id, name, url
+         FROM blogs
+         WHERE id=$1 AND user_id=$2`,
+        [
+          req.params.blogId,
+          req.user.id
+        ]
+      );
+
+      if (!owned.rowCount) {
+        return res.status(404).json({
+          error: 'blog_not_found'
+        });
+      }
+
+      const auth = await authForUser(req.user.id);
+      const bloggerBlogId = owned.rows[0].blogger_blog_id;
+
+      const [posts, pages] = await Promise.all([
+        listPosts(auth, bloggerBlogId),
+        listPages(auth, bloggerBlogId)
+      ]);
+
+      await audit(
+        req.user.id,
+        'feed_prepared_for_sharing',
+        {
+          blogId: req.params.blogId,
+          articles: posts.length,
+          pages: pages.length
+        }
+      );
+
+      res.setHeader('Cache-Control', 'no-store');
+
+      res.json({
+        blog: {
+          name: owned.rows[0].name,
+          url: owned.rows[0].url
+        },
+        totalArticles: posts.length,
+        totalPages: pages.length,
+        items: [...posts, ...pages]
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 router.post('/blogs/:blogId/sync', currentUser, requireCsrf, async (req, res, next) => {
   try {
     const owned = await query(
@@ -847,9 +911,6 @@ router.post('/posts/:postId/proposals', currentUser, requireCsrf, async (req, re
   }
 });
 
-/*
- * LISTA DE PROPOSTAS COM CONTAGEM DE ALTERAÇÕES
- */
 /*
  * RECÁLCULO DAS CONTAGENS DE PROPOSTAS ANTIGAS
  * POST /api/proposals/recalculate-counts
