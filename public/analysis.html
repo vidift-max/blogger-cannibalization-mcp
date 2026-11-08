@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1"
+>
+
+<title>Análise SEO — Blogger SEO Intelligence</title>
+
+<style>
+
+:root{
+  font-family:system-ui,sans-serif;
+  color:#172033;
+  background:#f4f6fa
+}
+
+body{
+  margin:0
+}
+
+.wrap{
+  max-width:980px;
+  margin:32px auto;
+  padding:18px
+}
+
+.card{
+  background:#fff;
+  border:1px solid #e1e5ec;
+  border-radius:14px;
+  padding:20px;
+  margin:14px 0
+}
+
+button{
+  background:#175cd3;
+  color:white;
+  border:0;
+  border-radius:8px;
+  padding:11px 15px;
+  cursor:pointer;
+  margin:4px 4px 4px 0
+}
+
+button.secondary{
+  background:#475467
+}
+
+.muted{
+  color:#667085
+}
+
+.blog{
+  border-top:1px solid #eaecf0;
+  padding:16px 0
+}
+
+.problem{
+  background:#f8fafc;
+  border:1px solid #eaecf0;
+  border-radius:10px;
+  padding:14px;
+  margin-top:12px
+}
+
+.good{
+  background:#f0fdf4;
+  border:1px solid #bbf7d0;
+  border-radius:10px;
+  padding:14px;
+  margin-top:12px
+}
+
+.warning{
+  color:#b54708
+}
+
+a{
+  overflow-wrap:anywhere
+}
+
+pre{
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  background:#f8fafc;
+  padding:12px;
+  border-radius:8px
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<main class="wrap">
+
+<button
+  class="secondary"
+  id="back"
+>
+  ← Voltar aos blogs
+</button>
+
+
+<h1>Análise SEO</h1>
+
+<p
+  id="summary"
+  class="muted"
+>
+Carregando análise...
+</p>
+
+
+<div id="result"></div>
+
+
+</main>
+
+
+<script>
+
+
+function esc(s){
+
+  return String(s??'').replace(
+    /[&<>"']/g,
+    c=>({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
+
+}
+
+
+/*
+ * Recupera a análise feita na página anterior.
+ */
+const raw=sessionStorage.getItem(
+  'bloggerSeoAnalysis'
+);
+
+
+if(!raw){
+
+  document.querySelector('#summary').textContent=
+    'Nenhuma análise disponível.';
+
+  document.querySelector('#result').innerHTML=`
+
+    <div class="card">
+
+      <h2>Nenhuma análise encontrada</h2>
+
+      <p>
+        Volte para a página de blogs e execute
+        uma nova análise.
+      </p>
+
+    </div>
+
+  `;
+
+}else{
+
+  try{
+
+    const data=JSON.parse(raw);
+
+    const a=data.analysis;
+    const s=data.sync;
+
+
+    document.querySelector('#summary').innerHTML=`
+
+      <b>${a.posts||0}</b> artigos analisados.
+
+      <br>
+
+      <span class="muted">
+        ${s.synced||0} artigos sincronizados.
+      </span>
+
+      <br><br>
+
+      <span class="muted">
+        ${esc(a.note||'')}
+      </span>
+
+    `;
+
+
+    const articles=a.articles||[];
+
+
+    document.querySelector('#result').innerHTML=
+
+      articles.map(article=>`
+
+        <div class="card">
+
+          <h2>
+            ${esc(article.title||'Artigo sem título')}
+          </h2>
+
+
+          <p>
+
+            <a
+              href="${esc(article.url||'#')}"
+              target="_blank"
+              rel="noopener"
+            >
+              ${esc(article.url||'')}
+            </a>
+
+          </p>
+
+
+          ${
+            article.problems &&
+            article.problems.length
+            ?
+
+            article.problems.map(problem=>`
+
+              <div class="problem">
+
+                <p>
+                  <b>⚠️ Possível conflito:</b>
+                  ${esc(problem.risk||'')}
+                </p>
+
+
+                <p>
+                  <b>Score:</b>
+                  ${esc(problem.score)}
+                </p>
+
+
+                ${
+                  problem.relatedArticle
+                  ?
+
+                  `
+
+                  <p>
+
+                    <b>
+                      Artigo relacionado:
+                    </b>
+
+                    ${esc(
+                      problem.relatedArticle.title||''
+                    )}
+
+                  </p>
+
+
+                  <p>
+
+                    <a
+                      href="${esc(
+                        problem.relatedArticle.url||'#'
+                      )}"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      ${esc(
+                        problem.relatedArticle.url||''
+                      )}
+                    </a>
+
+                  </p>
+
+                  `
+
+                  :
+
+                  ''
+
+                }
+
+
+                <p>
+
+                  <b>
+                    Termos em comum:
+                  </b>
+
+                  ${esc(
+                    (problem.sharedTerms||[])
+                    .join(', ')
+                  )}
+
+                </p>
+
+
+                <p>
+
+                  <b>
+                    Recomendação:
+                  </b>
+
+                  ${esc(
+                    problem.recommendation||''
+                  )}
+
+                </p>
+
+              </div>
+
+            `).join('')
+
+            :
+
+            `
+
+            <div class="good">
+
+              ✅ Nenhum possível conflito
+              encontrado neste artigo.
+
+            </div>
+
+            `
+
+          }
+
+
+          <button
+            class="secondary copy-problems"
+            data-title="${esc(
+              article.title||''
+            )}"
+            data-problems="${esc(
+              JSON.stringify(
+                article.problems||[]
+              )
+            )}"
+          >
+            Copiar problemas
+          </button>
+
+
+        </div>
+
+      `).join('');
+
+
+    /*
+     * Botões "Copiar problemas".
+     */
+    document
+      .querySelectorAll('.copy-problems')
+      .forEach(btn=>{
+
+        btn.onclick=async()=>{
+
+          try{
+
+            const problems=
+              JSON.parse(
+                btn.dataset.problems||'[]'
+              );
+
+
+            const text=problems.length
+
+              ?
+
+              problems.map((p,i)=>
+
+                `${i+1}. Possível conflito (${p.risk})
+Score: ${p.score}
+Artigo relacionado: ${p.relatedArticle?.title||''}
+Termos em comum: ${(p.sharedTerms||[]).join(', ')}
+Recomendação: ${p.recommendation||''}`
+
+              ).join('\n\n')
+
+              :
+
+              'Nenhum problema encontrado.';
+
+
+            await navigator.clipboard.writeText(
+
+              `Problemas do artigo: ${
+                btn.dataset.title
+              }
+
+${text}`
+
+            );
+
+
+            btn.textContent='Copiado!';
+
+
+            setTimeout(()=>{
+
+              btn.textContent='Copiar problemas';
+
+            },1500);
+
+
+          }catch(e){
+
+            alert(
+              'Não foi possível copiar os problemas.'
+            );
+
+          }
+
+        };
+
+      });
+
+
+  }catch(e){
+
+    document.querySelector('#summary').textContent=
+      'Erro ao carregar a análise.';
+
+    document.querySelector('#result').innerHTML=`
+
+      <div class="card">
+
+        <p>
+          ${esc(e.message)}
+        </p>
+
+      </div>
+
+    `;
+
+  }
+
+}
+
+
+/*
+ * Voltar para a lista de blogs.
+ */
+document.querySelector('#back').onclick=()=>{
+
+  window.location.href='/';
+
+};
+
+</script>
+
+</body>
+
+</html>
