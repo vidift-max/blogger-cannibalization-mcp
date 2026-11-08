@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -17,6 +16,7 @@ button:disabled{opacity:.5}
 .green{background:#15803d}
 .red{background:#b91c1c}
 .gray{background:#64748b}
+.orange{background:#c2410c}
 .copy-button{background:#0f766e;margin-top:8px}
 .article{border:1px solid #e2e8f0;border-radius:9px;padding:14px;margin:12px 0}
 .muted{color:#64748b;font-size:13px}
@@ -48,6 +48,8 @@ a{color:#2563eb;overflow-wrap:anywhere}
 <div id="summary">Carregando propostas...</div>
 <div id="message" class="status hidden"></div>
 <button id="refresh">Atualizar propostas</button>
+<button id="recalculateCounts" class="orange" type="button">🔄 Recalcular contagens antigas</button>
+<p class="muted">O recálculo atualiza a quantidade de trechos alterados nas propostas existentes. Não publica nem modifica artigos no Blogger.</p>
 </section>
 
 <section class="card">
@@ -220,6 +222,65 @@ async function loadProposals() {
   } catch (error) {
     $('proposals').textContent = error.message;
     showMessage(error.message, 'error');
+  }
+}
+
+async function recalculateCounts() {
+  const button = $('recalculateCounts');
+
+  if (!confirm(
+    'Deseja recalcular as contagens de todas as propostas antigas? Esta operação não publica nem modifica artigos no Blogger.'
+  )) {
+    return;
+  }
+
+  const token = csrfToken();
+
+  if (!token) {
+    showMessage(
+      'Token de segurança não encontrado. Atualize a página e tente novamente.',
+      'error'
+    );
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = '⏳ Recalculando...';
+
+  showMessage('Recalculando as contagens das propostas. Aguarde...');
+
+  try {
+    const response = await fetch('/api/proposals/recalculate-counts', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'x-csrf-token': token
+      }
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.message ||
+        result.error ||
+        'Não foi possível recalcular as contagens.'
+      );
+    }
+
+    showMessage(
+      result.message ||
+      (result.updated + ' propostas recalculadas com sucesso.'),
+      'success'
+    );
+
+    await loadProposals();
+
+  } catch (error) {
+    showMessage(error.message, 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = '🔄 Recalcular contagens antigas';
   }
 }
 
@@ -396,6 +457,7 @@ async function performAction(action) {
 $('approve').addEventListener('click', () => performAction('approve'));
 $('reject').addEventListener('click', () => performAction('reject'));
 $('refresh').addEventListener('click', loadProposals);
+$('recalculateCounts').addEventListener('click', recalculateCounts);
 
 $('copyOriginal').addEventListener('click', () =>
   copyHTML('original', 'copyOriginal', '📋 Copiar HTML original')
