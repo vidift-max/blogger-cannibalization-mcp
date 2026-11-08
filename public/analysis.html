@@ -52,6 +52,15 @@ button.secondary{
   background:#475467
 }
 
+button.download{
+  background:#067647
+}
+
+button:disabled{
+  opacity:.6;
+  cursor:not-allowed
+}
+
 .muted{
   color:#667085
 }
@@ -77,20 +86,20 @@ button.secondary{
   margin-top:12px
 }
 
+.filebox{
+  background:#f9fafb;
+  border:1px dashed #98a2b3;
+  border-radius:10px;
+  padding:16px;
+  margin-top:14px
+}
+
 .warning{
   color:#b54708
 }
 
 a{
   overflow-wrap:anywhere
-}
-
-pre{
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
-  background:#f8fafc;
-  padding:12px;
-  border-radius:8px
 }
 
 </style>
@@ -111,6 +120,7 @@ pre{
 
 
 <h1>Análise SEO</h1>
+
 
 <p
   id="summary"
@@ -146,6 +156,144 @@ function esc(s){
 
 
 /*
+ * Cria e baixa um arquivo TXT com as informações
+ * necessárias para a correção do artigo.
+ */
+function downloadCorrectionFile(article){
+
+  const problems=article.problems||[];
+
+
+  let content='';
+
+
+  content+=
+`BLOGGER SEO INTELLIGENCE
+ARQUIVO PARA CORREÇÃO DE ARTIGO
+
+IMPORTANTE:
+Este arquivo contém informações para análise e correção.
+Nenhuma alteração deve ser publicada automaticamente
+sem revisão e confirmação do usuário.
+
+========================================
+
+ARTIGO
+
+Título:
+${article.title||''}
+
+URL:
+${article.url||''}
+
+ID:
+${article.id||''}
+
+========================================
+
+PROBLEMAS ENCONTRADOS
+
+`;
+
+
+  if(!problems.length){
+
+    content+=
+`Nenhum possível conflito encontrado neste artigo.
+`;
+
+  }else{
+
+    problems.forEach((problem,index)=>{
+
+      content+=
+`
+Problema ${index+1}
+-------------------
+
+Risco:
+${problem.risk||''}
+
+Score:
+${problem.score||''}
+
+Artigo relacionado:
+${problem.relatedArticle?.title||''}
+
+URL do artigo relacionado:
+${problem.relatedArticle?.url||''}
+
+Termos em comum:
+${(problem.sharedTerms||[]).join(', ')}
+
+Recomendação:
+${problem.recommendation||''}
+
+`;
+
+    });
+
+  }
+
+
+  content+=
+`
+========================================
+
+INSTRUÇÕES PARA CORREÇÃO
+
+1. Analise o artigo original.
+2. Verifique se o possível conflito realmente existe.
+3. Preserve informações importantes e o sentido original.
+4. Melhore a diferenciação da intenção de busca quando necessário.
+5. Não invente informações.
+6. Não altere URLs sem necessidade.
+7. Gere uma versão corrigida do artigo.
+8. Retorne o arquivo corrigido para ser revisado
+   antes de qualquer publicação no Blogger.
+
+========================================
+`;
+
+
+  const blob=new Blob(
+    [content],
+    {
+      type:'text/plain;charset=utf-8'
+    }
+  );
+
+
+  const url=URL.createObjectURL(blob);
+
+
+  const a=document.createElement('a');
+
+  const safeTitle=
+    String(article.title||'artigo')
+      .replace(/[^\w\s-]/g,'')
+      .replace(/\s+/g,'-')
+      .toLowerCase();
+
+
+  a.href=url;
+
+  a.download=
+    `correcao-blogger-${safeTitle||'artigo'}.txt`;
+
+
+  document.body.appendChild(a);
+
+  a.click();
+
+  a.remove();
+
+  URL.revokeObjectURL(url);
+
+}
+
+
+/*
  * Recupera a análise feita na página anterior.
  */
 const raw=sessionStorage.getItem(
@@ -157,6 +305,7 @@ if(!raw){
 
   document.querySelector('#summary').textContent=
     'Nenhuma análise disponível.';
+
 
   document.querySelector('#result').innerHTML=`
 
@@ -180,6 +329,7 @@ if(!raw){
     const data=JSON.parse(raw);
 
     const a=data.analysis;
+
     const s=data.sync;
 
 
@@ -207,7 +357,7 @@ if(!raw){
 
     document.querySelector('#result').innerHTML=
 
-      articles.map(article=>`
+      articles.map((article,index)=>`
 
         <div class="card">
 
@@ -239,14 +389,24 @@ if(!raw){
               <div class="problem">
 
                 <p>
-                  <b>⚠️ Possível conflito:</b>
+
+                  <b>
+                    ⚠️ Possível conflito:
+                  </b>
+
                   ${esc(problem.risk||'')}
+
                 </p>
 
 
                 <p>
-                  <b>Score:</b>
+
+                  <b>
+                    Score:
+                  </b>
+
                   ${esc(problem.score)}
+
                 </p>
 
 
@@ -340,6 +500,31 @@ if(!raw){
           }
 
 
+          <div class="filebox">
+
+            <b>
+              📄 Arquivo para correção
+            </b>
+
+            <p class="muted">
+
+              Baixe este arquivo e envie-o aqui no
+              ChatGPT para preparar a correção do artigo.
+
+            </p>
+
+
+            <button
+              class="download"
+              data-index="${index}"
+            >
+              Baixar arquivo para correção
+            </button>
+
+
+          </div>
+
+
           <button
             class="secondary copy-problems"
             data-title="${esc(
@@ -358,6 +543,28 @@ if(!raw){
         </div>
 
       `).join('');
+
+
+    /*
+     * Botões de download.
+     */
+    document
+      .querySelectorAll('.download')
+      .forEach(btn=>{
+
+        btn.onclick=()=>{
+
+          const article=
+            articles[
+              Number(btn.dataset.index)
+            ];
+
+
+          downloadCorrectionFile(article);
+
+        };
+
+      });
 
 
     /*
@@ -435,6 +642,7 @@ ${text}`
     document.querySelector('#summary').textContent=
       'Erro ao carregar a análise.';
 
+
     document.querySelector('#result').innerHTML=`
 
       <div class="card">
@@ -465,4 +673,4 @@ document.querySelector('#back').onclick=()=>{
 
 </body>
 
-</html>
+  </html>
