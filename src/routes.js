@@ -1,11 +1,27 @@
+
 import express from 'express';
 import archiver from 'archiver';
 import { google } from 'googleapis';
 import { createZipImportRouter } from './zip-import.js';
 import { pool, query } from './db.js';
-import { encryptSecret, decryptSecret, randomToken, sha256, safeEqual, stripHtml } from './security.js';
-import { BLOGGER_SCOPE, oauthClient, listBlogs, listPosts, getPost, updatePost } from './blogger.js';
+import {
+  encryptSecret,
+  decryptSecret,
+  randomToken,
+  sha256,
+  safeEqual,
+  stripHtml
+} from './security.js';
+import {
+  BLOGGER_SCOPE,
+  oauthClient,
+  listBlogs,
+  listPosts,
+  getPost,
+  updatePost
+} from './blogger.js';
 import { analyzePosts } from './analysis.js';
+import { countChangedSections } from './diff-count.js';
 
 export const router = express.Router();
 
@@ -118,14 +134,13 @@ async function audit(userId, eventType, details = {}) {
     ]
   );
 }
+
 router.use(createZipImportRouter({
   currentUser,
   requireCsrf,
   audit
 }));
-/*
- * Cria um nome de arquivo seguro para o ZIP.
- */
+
 function safeFileName(name, fallback = 'artigo') {
   let value = String(name || fallback)
     .normalize('NFD')
@@ -147,9 +162,6 @@ function safeFileName(name, fallback = 'artigo') {
   return value;
 }
 
-/*
- * Garante que não existam dois arquivos com o mesmo nome.
- */
 function uniqueFileName(baseName, usedNames) {
   let name = `${baseName}.html`;
   let counter = 2;
@@ -196,7 +208,6 @@ router.get('/auth/google', (req, res) => {
 router.get('/oauth/google/callback', async (req, res, next) => {
   try {
     const { code, state } = req.query;
-
     const expected = req.cookies?.oauth_nonce;
 
     res.clearCookie(
@@ -216,7 +227,6 @@ router.get('/oauth/google/callback', async (req, res, next) => {
     }
 
     const c = oauthClient();
-
     const { tokens } = await c.getToken(code);
 
     c.setCredentials(tokens);
@@ -356,10 +366,7 @@ router.get('/oauth/google/callback', async (req, res, next) => {
         }
       );
 
-      await audit(
-        uid,
-        'google_connected'
-      );
+      await audit(uid, 'google_connected');
 
       res.redirect('/');
     } catch (e) {
@@ -391,20 +398,10 @@ router.post('/auth/logout', currentUser, requireCsrf, async (req, res, next) => 
       [req.sessionHash]
     );
 
-    res.clearCookie(
-      'sid',
-      { path: '/' }
-    );
+    res.clearCookie('sid', { path: '/' });
+    res.clearCookie('csrf', { path: '/' });
 
-    res.clearCookie(
-      'csrf',
-      { path: '/' }
-    );
-
-    await audit(
-      req.user.id,
-      'logout'
-    );
+    await audit(req.user.id, 'logout');
 
     res.json({ ok: true });
   } catch (e) {
@@ -415,9 +412,7 @@ router.post('/auth/logout', currentUser, requireCsrf, async (req, res, next) => 
 router.get('/blogs', currentUser, async (req, res, next) => {
   try {
     const auth = await authForUser(req.user.id);
-
     const blogs = await listBlogs(auth);
-
     const saved = [];
 
     for (const b of blogs) {
@@ -445,9 +440,7 @@ router.get('/blogs', currentUser, async (req, res, next) => {
       saved.push(r.rows[0]);
     }
 
-    res.json({
-      blogs: saved
-    });
+    res.json({ blogs: saved });
   } catch (e) {
     next(e);
   }
@@ -466,9 +459,7 @@ router.post('/blogs/:blogId/sync', currentUser, requireCsrf, async (req, res, ne
     );
 
     if (!owned.rowCount) {
-      return res
-        .status(404)
-        .json({ error: 'blog_not_found' });
+      return res.status(404).json({ error: 'blog_not_found' });
     }
 
     const auth = await authForUser(req.user.id);
@@ -541,18 +532,12 @@ router.post('/blogs/:blogId/sync', currentUser, requireCsrf, async (req, res, ne
       client.release();
     }
 
-    await audit(
-      req.user.id,
-      'blog_synced',
-      {
-        blogId: owned.rows[0].id,
-        posts: posts.length
-      }
-    );
-
-    res.json({
-      synced: posts.length
+    await audit(req.user.id, 'blog_synced', {
+      blogId: owned.rows[0].id,
+      posts: posts.length
     });
+
+    res.json({ synced: posts.length });
   } catch (e) {
     next(e);
   }
@@ -590,26 +575,19 @@ router.post('/blogs/:blogId/analyze', currentUser, requireCsrf, async (req, res,
       );
 
       if (!exists.rowCount) {
-        return res
-          .status(404)
-          .json({ error: 'blog_not_found' });
+        return res.status(404).json({ error: 'blog_not_found' });
       }
     }
 
     const findings = analyzePosts(r.rows);
 
-    const problemsByPost =
-      new Map(
-        r.rows.map(p => [
-          String(p.id),
-          []
-        ])
-      );
+    const problemsByPost = new Map(
+      r.rows.map(p => [String(p.id), []])
+    );
 
     for (const f of findings) {
       for (const p of f.posts || []) {
-        const target =
-          problemsByPost.get(String(p.id));
+        const target = problemsByPost.get(String(p.id));
 
         if (target) {
           target.push({
@@ -617,55 +595,38 @@ router.post('/blogs/:blogId/analyze', currentUser, requireCsrf, async (req, res,
             risk: f.risk,
             score: f.score,
             relatedArticle:
-              (f.posts || [])
-                .filter(
-                  x => String(x.id) !== String(p.id)
-                )[0] || null,
-            sharedTerms:
-              f.shared_terms || [],
-            recommendation:
-              f.recommendation
+              (f.posts || []).filter(
+                x => String(x.id) !== String(p.id)
+              )[0] || null,
+            sharedTerms: f.shared_terms || [],
+            recommendation: f.recommendation
           });
         }
       }
     }
 
-    const articles =
-      r.rows.map(p => ({
-        id: p.id,
-        title: p.title,
-        url: p.url,
-        content_html:
-          p.content_html || '',
-        problems:
-          problemsByPost.get(String(p.id)) || []
-      }));
+    const articles = r.rows.map(p => ({
+      id: p.id,
+      title: p.title,
+      url: p.url,
+      content_html: p.content_html || '',
+      problems: problemsByPost.get(String(p.id)) || []
+    }));
 
     await query(
-      `INSERT INTO analysis_runs(
-        user_id,
-        blog_id,
-        result
-      )
-      VALUES($1,$2,$3)`,
+      `INSERT INTO analysis_runs(user_id,blog_id,result)
+       VALUES($1,$2,$3)`,
       [
         req.user.id,
         req.params.blogId,
-        JSON.stringify({
-          findings,
-          articles
-        })
+        JSON.stringify({ findings, articles })
       ]
     );
 
-    await audit(
-      req.user.id,
-      'analysis_run',
-      {
-        blogId: req.params.blogId,
-        findings: findings.length
-      }
-    );
+    await audit(req.user.id, 'analysis_run', {
+      blogId: req.params.blogId,
+      findings: findings.length
+    });
 
     res.json({
       posts: r.rowCount,
@@ -680,23 +641,8 @@ router.post('/blogs/:blogId/analyze', currentUser, requireCsrf, async (req, res,
 });
 
 /*
- * ============================================================
  * DOWNLOAD DE TODOS OS ARTIGOS
- * ============================================================
- *
  * GET /api/blogs/:blogId/download-all
- *
- * Gera um único ZIP contendo:
- *
- *   /artigos/
- *      artigo-1.html
- *      artigo-2.html
- *      ...
- *
- *   manifest.json
- *
- * O conteúdo vem do banco local sincronizado.
- * Nenhuma alteração é feita no Blogger.
  */
 router.get(
   '/blogs/:blogId/download-all',
@@ -704,11 +650,7 @@ router.get(
   async (req, res, next) => {
     try {
       const blogResult = await query(
-        `SELECT
-          id,
-          blogger_blog_id,
-          name,
-          url
+        `SELECT id,blogger_blog_id,name,url
          FROM blogs
          WHERE id=$1 AND user_id=$2`,
         [
@@ -718,9 +660,7 @@ router.get(
       );
 
       if (!blogResult.rowCount) {
-        return res
-          .status(404)
-          .json({ error: 'blog_not_found' });
+        return res.status(404).json({ error: 'blog_not_found' });
       }
 
       const blog = blogResult.rows[0];
@@ -734,8 +674,7 @@ router.get(
           content_html,
           updated_at
          FROM posts
-         WHERE blog_id=$1
-           AND user_id=$2
+         WHERE blog_id=$1 AND user_id=$2
          ORDER BY id ASC`,
         [
           blog.id,
@@ -744,63 +683,37 @@ router.get(
       );
 
       if (!postsResult.rowCount) {
-        return res
-          .status(404)
-          .json({
-            error: 'no_posts',
-            message:
-              'Nenhum artigo sincronizado foi encontrado. Sincronize o blog antes de baixar.'
-          });
+        return res.status(404).json({
+          error: 'no_posts',
+          message:
+            'Nenhum artigo sincronizado foi encontrado. Sincronize o blog antes de baixar.'
+        });
       }
 
-      const safeBlogName =
-        safeFileName(
-          blog.name,
-          'blogger'
-        );
-
-      const zipFileName =
-        `blogger-seo-${safeBlogName}-artigos.zip`;
+      const safeBlogName = safeFileName(blog.name, 'blogger');
+      const zipFileName = `blogger-seo-${safeBlogName}-artigos.zip`;
 
       res.status(200);
-
-      res.setHeader(
-        'Content-Type',
-        'application/zip'
-      );
-
+      res.setHeader('Content-Type', 'application/zip');
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="${zipFileName}"`
       );
+      res.setHeader('Cache-Control', 'no-store');
 
-      res.setHeader(
-        'Cache-Control',
-        'no-store'
-      );
+      const archive = archiver('zip', {
+        zlib: { level: 9 }
+      });
 
-      const archive =
-        archiver('zip', {
-          zlib: {
-            level: 9
-          }
-        });
+      archive.on('error', error => {
+        console.error('[zip-error]', error);
 
-      archive.on(
-        'error',
-        error => {
-          console.error(
-            '[zip-error]',
-            error
-          );
-
-          if (!res.headersSent) {
-            next(error);
-          } else {
-            res.destroy(error);
-          }
+        if (!res.headersSent) {
+          next(error);
+        } else {
+          res.destroy(error);
         }
-      );
+      });
 
       archive.pipe(res);
 
@@ -820,29 +733,21 @@ router.get(
       };
 
       for (const post of postsResult.rows) {
-        const baseName =
-          safeFileName(
-            post.title,
-            `artigo-${post.id}`
-          );
+        const baseName = safeFileName(
+          post.title,
+          `artigo-${post.id}`
+        );
 
-        const fileName =
-          uniqueFileName(
-            baseName,
-            usedNames
-          );
+        const fileName = uniqueFileName(baseName, usedNames);
 
         const html =
           typeof post.content_html === 'string'
             ? post.content_html
             : '';
 
-        archive.append(
-          html,
-          {
-            name: `artigos/${fileName}`
-          }
-        );
+        archive.append(html, {
+          name: `artigos/${fileName}`
+        });
 
         manifest.articles.push({
           databaseId: post.id,
@@ -855,32 +760,25 @@ router.get(
       }
 
       archive.append(
-        JSON.stringify(
-          manifest,
-          null,
-          2
-        ),
-        {
-          name: 'manifest.json'
-        }
+        JSON.stringify(manifest, null, 2),
+        { name: 'manifest.json' }
       );
 
       await archive.finalize();
 
-      await audit(
-        req.user.id,
-        'articles_downloaded_zip',
-        {
-          blogId: blog.id,
-          posts: postsResult.rowCount
-        }
-      );
+      await audit(req.user.id, 'articles_downloaded_zip', {
+        blogId: blog.id,
+        posts: postsResult.rowCount
+      });
     } catch (e) {
       next(e);
     }
   }
 );
 
+/*
+ * CRIAÇÃO DE PROPOSTA INDIVIDUAL
+ */
 router.post('/posts/:postId/proposals', currentUser, requireCsrf, async (req, res, next) => {
   try {
     const { html } = req.body || {};
@@ -890,9 +788,7 @@ router.post('/posts/:postId/proposals', currentUser, requireCsrf, async (req, re
       !html.trim() ||
       html.length > 1000000
     ) {
-      return res
-        .status(400)
-        .json({ error: 'invalid_html' });
+      return res.status(400).json({ error: 'invalid_html' });
     }
 
     const r = await query(
@@ -906,36 +802,40 @@ router.post('/posts/:postId/proposals', currentUser, requireCsrf, async (req, re
     );
 
     if (!r.rowCount) {
-      return res
-        .status(404)
-        .json({ error: 'post_not_found' });
+      return res.status(404).json({ error: 'post_not_found' });
     }
+
+    const previousHtml = r.rows[0].content_html || '';
+
+    const changeCount = countChangedSections(
+      previousHtml,
+      html
+    );
 
     const b = await query(
       `INSERT INTO post_backups(
         user_id,
         post_id,
         previous_html,
-        proposed_html
+        proposed_html,
+        change_count
       )
-      VALUES($1,$2,$3,$4)
-      RETURNING id,status,created_at`,
+      VALUES($1,$2,$3,$4,$5)
+      RETURNING id,status,created_at,change_count`,
       [
         req.user.id,
         r.rows[0].id,
-        r.rows[0].content_html,
-        html
+        previousHtml,
+        html,
+        changeCount
       ]
     );
 
-    await audit(
-      req.user.id,
-      'proposal_created',
-      {
-        proposalId: b.rows[0].id,
-        postId: r.rows[0].id
-      }
-    );
+    await audit(req.user.id, 'proposal_created', {
+      proposalId: b.rows[0].id,
+      postId: r.rows[0].id,
+      changeCount
+    });
 
     res.status(201).json({
       proposal: b.rows[0],
@@ -947,6 +847,9 @@ router.post('/posts/:postId/proposals', currentUser, requireCsrf, async (req, re
   }
 });
 
+/*
+ * LISTA DE PROPOSTAS COM CONTAGEM DE ALTERAÇÕES
+ */
 router.get('/proposals', currentUser, async (req, res, next) => {
   try {
     const r = await query(
@@ -954,6 +857,7 @@ router.get('/proposals', currentUser, async (req, res, next) => {
         pb.id,
         pb.post_id,
         pb.status,
+        pb.change_count,
         pb.created_at,
         pb.applied_at,
         p.title,
@@ -975,6 +879,9 @@ router.get('/proposals', currentUser, async (req, res, next) => {
   }
 });
 
+/*
+ * APROVAÇÃO MANUAL DE PROPOSTA
+ */
 router.post('/proposals/:id/approve', currentUser, requireCsrf, async (req, res, next) => {
   const client = await pool.connect();
 
@@ -1006,11 +913,9 @@ router.post('/proposals/:id/approve', currentUser, requireCsrf, async (req, res,
     if (!p.rowCount) {
       await client.query('ROLLBACK');
 
-      return res
-        .status(404)
-        .json({
-          error: 'proposal_not_found'
-        });
+      return res.status(404).json({
+        error: 'proposal_not_found'
+      });
     }
 
     row = p.rows[0];
@@ -1018,11 +923,9 @@ router.post('/proposals/:id/approve', currentUser, requireCsrf, async (req, res,
     if (row.status !== 'pending') {
       await client.query('ROLLBACK');
 
-      return res
-        .status(409)
-        .json({
-          error: 'proposal_not_pending'
-        });
+      return res.status(409).json({
+        error: 'proposal_not_pending'
+      });
     }
 
     await client.query(
@@ -1038,31 +941,24 @@ router.post('/proposals/:id/approve', currentUser, requireCsrf, async (req, res,
 
     await client.query('COMMIT');
 
-    const auth =
-      await authForUser(
-        req.user.id
-      );
+    const auth = await authForUser(req.user.id);
 
-    const live =
-      await getPost(
-        auth,
-        row.blogger_blog_id,
-        row.blogger_post_id
-      );
+    const live = await getPost(
+      auth,
+      row.blogger_blog_id,
+      row.blogger_post_id
+    );
 
     if (
       row.local_updated_at &&
       live.updated &&
-      new Date(live.updated) >
-        new Date(row.local_updated_at)
+      new Date(live.updated) > new Date(row.local_updated_at)
     ) {
-      return res
-        .status(409)
-        .json({
-          error: 'blogger_post_changed',
-          message:
-            'O artigo mudou no Blogger desde a última sincronização. Sincronize novamente antes de aprovar.'
-        });
+      return res.status(409).json({
+        error: 'blogger_post_changed',
+        message:
+          'O artigo mudou no Blogger desde a última sincronização. Sincronize novamente antes de aprovar.'
+      });
     }
 
     await updatePost(
@@ -1099,25 +995,19 @@ router.post('/proposals/:id/approve', currentUser, requireCsrf, async (req, res,
       ]
     );
 
-    await audit(
-      req.user.id,
-      'proposal_applied',
-      {
-        proposalId: row.id,
-        postId: row.post_id
-      }
-    );
+    await audit(req.user.id, 'proposal_applied', {
+      proposalId: row.id,
+      postId: row.post_id
+    });
 
     res.json({
       ok: true,
       backupId: row.id
     });
   } catch (e) {
-    if (client) {
-      try {
-        await client.query('ROLLBACK');
-      } catch {}
-    }
+    try {
+      await client.query('ROLLBACK');
+    } catch {}
 
     next(e);
   } finally {
@@ -1125,6 +1015,9 @@ router.post('/proposals/:id/approve', currentUser, requireCsrf, async (req, res,
   }
 });
 
+/*
+ * RESTAURAÇÃO DE BACKUP
+ */
 router.post('/proposals/:id/restore', currentUser, requireCsrf, async (req, res, next) => {
   try {
     const r = await query(
@@ -1146,27 +1039,20 @@ router.post('/proposals/:id/restore', currentUser, requireCsrf, async (req, res,
     );
 
     if (!r.rowCount) {
-      return res
-        .status(404)
-        .json({
-          error: 'backup_not_found'
-        });
+      return res.status(404).json({
+        error: 'backup_not_found'
+      });
     }
 
     const row = r.rows[0];
 
     if (row.status !== 'applied') {
-      return res
-        .status(409)
-        .json({
-          error: 'backup_not_applied'
-        });
+      return res.status(409).json({
+        error: 'backup_not_applied'
+      });
     }
 
-    const auth =
-      await authForUser(
-        req.user.id
-      );
+    const auth = await authForUser(req.user.id);
 
     await updatePost(
       auth,
@@ -1202,14 +1088,10 @@ router.post('/proposals/:id/restore', currentUser, requireCsrf, async (req, res,
       ]
     );
 
-    await audit(
-      req.user.id,
-      'proposal_restored',
-      {
-        proposalId: row.id,
-        postId: row.post_id
-      }
-    );
+    await audit(req.user.id, 'proposal_restored', {
+      proposalId: row.id,
+      postId: row.post_id
+    });
 
     res.json({
       ok: true,
