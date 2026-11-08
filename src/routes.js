@@ -118,7 +118,11 @@ async function audit(userId, eventType, details = {}) {
     ]
   );
 }
-
+router.use(createZipImportRouter({
+  currentUser,
+  requireCsrf,
+  audit
+}));
 /*
  * Cria um nome de arquivo seguro para o ZIP.
  */
