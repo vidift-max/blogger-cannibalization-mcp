@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -16,6 +17,7 @@ button:disabled{opacity:.5}
 .green{background:#15803d}
 .red{background:#b91c1c}
 .gray{background:#64748b}
+.copy-button{background:#0f766e;margin-top:8px}
 .article{border:1px solid #e2e8f0;border-radius:9px;padding:14px;margin:12px 0}
 .muted{color:#64748b;font-size:13px}
 .status{padding:12px;border-radius:8px;background:#eff6ff;color:#1e40af;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -60,10 +62,17 @@ a{color:#2563eb;overflow-wrap:anywhere}
 <div>
 <h3>Artigo original</h3>
 <textarea id="original" readonly></textarea>
+<button id="copyOriginal" class="copy-button" type="button">
+📋 Copiar HTML original
+</button>
 </div>
+
 <div>
 <h3>Artigo corrigido</h3>
 <textarea id="corrected" readonly></textarea>
+<button id="copyCorrected" class="copy-button" type="button">
+📋 Copiar HTML corrigido
+</button>
 </div>
 </div>
 
@@ -104,6 +113,53 @@ function showDetailMessage(message, type = '') {
   el.textContent = message;
   el.className = 'status' + (type ? ' ' + type : '');
   el.classList.remove('hidden');
+}
+
+async function copyHTML(fieldId, buttonId, originalText) {
+  const field = $(fieldId);
+  const button = $(buttonId);
+  const content = field.value;
+
+  if (!content) {
+    showDetailMessage('Não há conteúdo para copiar nesta caixa.', 'error');
+    return;
+  }
+
+  button.disabled = true;
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(content);
+    } else {
+      field.focus();
+      field.select();
+      field.setSelectionRange(0, field.value.length);
+
+      const copied = document.execCommand('copy');
+
+      if (!copied) {
+        throw new Error('Não foi possível copiar automaticamente.');
+      }
+
+      field.setSelectionRange(0, 0);
+      field.blur();
+    }
+
+    button.textContent = '✓ Copiado!';
+    showDetailMessage('HTML copiado com sucesso!', 'success');
+
+    setTimeout(() => {
+      button.textContent = originalText;
+    }, 2000);
+
+  } catch (error) {
+    showDetailMessage(
+      'Não foi possível copiar automaticamente. Selecione o conteúdo da caixa e copie manualmente.',
+      'error'
+    );
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function statusLabel(status) {
@@ -202,6 +258,9 @@ async function openProposal(id) {
   $('detailStatus').classList.add('hidden');
   $('actions').classList.add('hidden');
 
+  $('original').value = '';
+  $('corrected').value = '';
+
   try {
     const response = await fetch(
       '/api/proposals/' + encodeURIComponent(id),
@@ -226,6 +285,9 @@ async function openProposal(id) {
 
     $('original').value = currentProposal.previous_html || '';
     $('corrected').value = currentProposal.proposed_html || '';
+
+    $('copyOriginal').textContent = '📋 Copiar HTML original';
+    $('copyCorrected').textContent = '📋 Copiar HTML corrigido';
 
     if (currentProposal.status === 'pending') {
       $('actions').classList.remove('hidden');
@@ -302,8 +364,16 @@ $('approve').addEventListener('click', () => performAction('approve'));
 $('reject').addEventListener('click', () => performAction('reject'));
 $('refresh').addEventListener('click', loadProposals);
 
+$('copyOriginal').addEventListener('click', () =>
+  copyHTML('original', 'copyOriginal', '📋 Copiar HTML original')
+);
+
+$('copyCorrected').addEventListener('click', () =>
+  copyHTML('corrected', 'copyCorrected', '📋 Copiar HTML corrigido')
+);
+
 loadProposals();
 })();
 </script>
 </body>
-  </html>
+</html>
