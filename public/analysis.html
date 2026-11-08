@@ -1,1307 +1,686 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-
-<meta charset="utf-8">
-
-<meta
-  name="viewport"
-  content="width=device-width,initial-scale=1"
->
-
-<title>Análise SEO — Blogger SEO Intelligence</title>
-
-<style>
-
-:root{
-  font-family:system-ui,sans-serif;
-  color:#172033;
-  background:#f4f6fa
-}
-
-body{
-  margin:0
-}
-
-.wrap{
-  max-width:980px;
-  margin:32px auto;
-  padding:18px
-}
-
-.card{
-  background:#fff;
-  border:1px solid #e1e5ec;
-  border-radius:14px;
-  padding:20px;
-  margin:14px 0
-}
-
-button{
-  background:#175cd3;
-  color:white;
-  border:0;
-  border-radius:8px;
-  padding:11px 15px;
-  cursor:pointer;
-  margin:4px 4px 4px 0
-}
-
-button.secondary{
-  background:#475467
-}
-
-button.download{
-  background:#067647
-}
-
-button:disabled{
-  opacity:.6;
-  cursor:not-allowed
-}
-
-input[type="file"]{
-  display:block;
-  width:100%;
-  box-sizing:border-box;
-  padding:12px;
-  border:1px solid #d0d5dd;
-  border-radius:8px;
-  background:#fff;
-  margin-top:10px
-}
-
-.muted{
-  color:#667085
-}
-
-.blog{
-  border-top:1px solid #eaecf0;
-  padding:16px 0
-}
-
-.problem{
-  background:#f8fafc;
-  border:1px solid #eaecf0;
-  border-radius:10px;
-  padding:14px;
-  margin-top:12px
-}
-
-.good{
-  background:#f0fdf4;
-  border:1px solid #bbf7d0;
-  border-radius:10px;
-  padding:14px;
-  margin-top:12px
-}
-
-.filebox{
-  background:#f9fafb;
-  border:1px dashed #98a2b3;
-  border-radius:10px;
-  padding:16px;
-  margin-top:14px
-}
-
-.preview{
-  width:100%;
-  min-height:500px;
-  border:1px solid #d0d5dd;
-  border-radius:8px;
-  background:white;
-  margin-top:12px
-}
-
-.warning{
-  color:#b54708
-}
-
-.success{
-  color:#067647
-}
-
-a{
-  overflow-wrap:anywhere
-}
-
-</style>
-
-</head>
-
-
-<body>
-
-<main class="wrap">
-
-
-<button
-  class="secondary"
-  id="back"
->
-  ← Voltar aos blogs
-</button>
-
-
-<h1>Análise SEO</h1>
-
-
-<p
-  id="summary"
-  class="muted"
->
-Carregando análise...
-</p>
-
-
-<!--
-====================================================
-DOWNLOAD DE TODOS OS ARTIGOS
-====================================================
--->
-
-<div class="card">
-
-  <h2>📦 Todos os artigos</h2>
-
-  <p class="muted">
-
-    Baixe todos os artigos deste blog de uma só vez
-    em um único arquivo ZIP.
-
-  </p>
-
-  <p class="muted">
-
-    Os artigos serão mantidos em HTML para que
-    possam ser corrigidos e revisados depois.
-
-  </p>
-
-  <button
-    id="downloadAll"
-    class="download"
-  >
-
-    📦 Baixar todos os artigos
-
-  </button>
-
-
-  <p
-    id="downloadAllStatus"
-    class="muted"
-  ></p>
-
-</div>
-
-
-<div id="result"></div>
-
-
-<!--
-====================================================
-ENVIO DO ARQUIVO CORRIGIDO
-====================================================
--->
-
-<div class="card" id="uploadCard">
-
-  <h2>📤 Enviar arquivo corrigido</h2>
-
-  <p class="muted">
-
-    Depois de corrigir o artigo no ChatGPT,
-    envie aqui o arquivo HTML corrigido.
-
-  </p>
-
-  <p class="muted">
-
-    O arquivo será apenas carregado e exibido
-    para revisão.
-
-    <b>
-      Nada será publicado automaticamente
-      no Blogger.
-    </b>
-
-  </p>
-
-
-  <input
-    type="file"
-    id="correctedFile"
-    accept=".html,.htm"
-  >
-
-
-  <div
-    id="uploadStatus"
-    class="muted"
-  ></div>
-
-
-  <div id="previewBox"></div>
-
-</div>
-
-
-</main>
-
-
-<script>
-
-
-/*
-====================================================
-ESCAPE DE HTML
-====================================================
-*/
-
-function esc(s){
-
-  return String(s??'').replace(
-    /[&<>"']/g,
-    c=>({
-      '&':'&amp;',
-      '<':'&lt;',
-      '>':'&gt;',
-      '"':'&quot;',
-      "'":'&#39;'
-    }[c])
-  );
-
-}
-
-
-/*
-====================================================
-DOWNLOAD DE UM ARTIGO
-====================================================
-*/
-
-function downloadCorrectionFile(article){
-
-  let originalHtml=
-    article.content_html ||
-    article.contentHtml ||
-    '';
-
-
-  if(!originalHtml.trim()){
-
-    originalHtml=`
-
-<!doctype html>
-<html lang="pt-BR">
-
-<head>
-
-<meta charset="utf-8">
-
-<title>${esc(
-  article.title||'Artigo'
-)}</title>
-
-</head>
-
-<body>
-
-<h1>${esc(
-  article.title||''
-)}</h1>
-
-<p>
-URL original:
-${esc(
-  article.url||''
-)}
-</p>
-
-<!--
-O conteúdo HTML completo ainda não foi
-recebido pela API.
--->
-
-</body>
-
-</html>
-
-`;
-
-  }
-
-
-  const problems=
-    article.problems||[];
-
-
-  let instructions=`<!--
-
-BLOGGER SEO INTELLIGENCE
-ARQUIVO PARA CORREÇÃO
-
-Título:
-${article.title||''}
-
-URL:
-${article.url||''}
-
-ID:
-${article.id||''}
-
-========================================
-
-POSSÍVEIS PROBLEMAS
-
-`;
-
-
-  if(!problems.length){
-
-    instructions+=
-      'Nenhum possível conflito encontrado.\n';
-
-  }else{
-
-    problems.forEach((problem,index)=>{
-
-      instructions+=`
-
-Problema ${index+1}
-
-Risco:
-${problem.risk||''}
-
-Score:
-${problem.score||''}
-
-Artigo relacionado:
-${problem.relatedArticle?.title||''}
-
-URL relacionado:
-${problem.relatedArticle?.url||''}
-
-Termos em comum:
-${(problem.sharedTerms||[]).join(', ')}
-
-Recomendação:
-${problem.recommendation||''}
-
-`;
-
-    });
-
-  }
-
-
-  instructions+=`
-
-========================================
-
-INSTRUÇÕES
-
-Analise o artigo antes de fazer alterações.
-
-Preserve informações importantes.
-
-Não invente informações.
-
-Preserve links, imagens e estrutura HTML
-quando possível.
-
-Melhore a diferenciação do artigo somente
-quando houver motivo real.
-
-Este arquivo será revisado antes de qualquer
-publicação no Blogger.
-
-========================================
-
--->`;
-
-
-  let finalHtml='';
-
-
-  if(/^\s*<!doctype/i.test(originalHtml)){
-
-    finalHtml=
-      originalHtml.replace(
-        /^\s*<!doctype[^>]*>/i,
-        match=>match+'\n'+instructions
-      );
-
-  }else{
-
-    finalHtml=
-      instructions+'\n'+originalHtml;
-
-  }
-
-
-  const blob=new Blob(
-    [finalHtml],
-    {
-      type:'text/html;charset=utf-8'
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Análise SEO — Blogger SEO Intelligence</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
     }
-  );
 
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #f4f6fa;
+      color: #202938;
+      font-family: Arial, sans-serif;
+    }
 
-  const url=
-    URL.createObjectURL(blob);
+    .container {
+      max-width: 1050px;
+      margin: auto;
+    }
 
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
 
-  const a=
-    document.createElement('a');
+    h1 {
+      font-size: 25px;
+      margin: 0;
+    }
 
+    h2 {
+      font-size: 19px;
+      margin-top: 0;
+    }
 
-  const safeTitle=
-    String(
-      article.title||'artigo'
-    )
-      .replace(
-        /[^\w\s-]/g,
-        ''
-      )
-      .replace(
-        /\s+/g,
-        '-'
-      )
-      .toLowerCase();
+    .card {
+      background: white;
+      border: 1px solid #e1e5ec;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.035);
+    }
 
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 17px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      background: #2563eb;
+      color: white;
+    }
 
-  a.href=url;
+    button:hover {
+      opacity: .9;
+    }
 
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
 
-  a.download=
-    `correcao-blogger-${
-      safeTitle||'artigo'
-    }.html`;
+    .secondary {
+      background: #64748b;
+    }
 
+    .green {
+      background: #15803d;
+    }
 
-  document.body.appendChild(a);
+    .orange {
+      background: #c2410c;
+    }
 
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
 
-  a.click();
+    .stat {
+      padding: 15px;
+      background: #f1f5f9;
+      border-radius: 9px;
+    }
 
+    .stat strong {
+      display: block;
+      font-size: 25px;
+      margin-bottom: 5px;
+    }
 
-  a.remove();
+    .article {
+      border: 1px solid #e2e8f0;
+      padding: 17px;
+      border-radius: 9px;
+      margin-top: 13px;
+    }
 
+    .article h3 {
+      margin-top: 0;
+      font-size: 17px;
+    }
 
-  URL.revokeObjectURL(url);
+    .article a {
+      color: #2563eb;
+      word-break: break-all;
+    }
 
-}
+    .problem {
+      background: #fff7ed;
+      border-left: 4px solid #ea580c;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
 
+    .muted {
+      color: #64748b;
+      font-size: 13px;
+    }
 
-/*
-====================================================
-CARREGAR RESULTADO DA ANÁLISE
-====================================================
-*/
+    .status {
+      padding: 13px;
+      border-radius: 8px;
+      margin-top: 12px;
+      background: #eff6ff;
+      color: #1e40af;
+      overflow-wrap: anywhere;
+    }
 
-const raw=
-  sessionStorage.getItem(
-    'bloggerSeoAnalysis'
-  );
+    .error {
+      background: #fef2f2;
+      color: #991b1b;
+    }
 
+    .success {
+      background: #f0fdf4;
+      color: #166534;
+    }
 
-if(!raw){
+    input[type="file"] {
+      display: block;
+      width: 100%;
+      margin: 15px 0;
+    }
 
-  document.querySelector(
-    '#summary'
-  ).textContent=
-    'Nenhuma análise disponível.';
+    iframe {
+      width: 100%;
+      min-height: 300px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: white;
+    }
 
+    .hidden {
+      display: none;
+    }
 
-  document.querySelector(
-    '#result'
-  ).innerHTML=`
+    @media (max-width: 600px) {
+      body {
+        padding: 12px;
+      }
 
-    <div class="card">
+      h1 {
+        font-size: 21px;
+      }
 
-      <h2>
-        Nenhuma análise encontrada
-      </h2>
+      .card {
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
 
-      <p>
+<body>
+<div class="container">
 
-        Volte para a página de blogs e execute
-        uma nova análise.
+  <header>
+    <h1>📊 Blogger SEO Intelligence</h1>
+    <button class="secondary" onclick="window.location.href='/'">
+      ← Voltar
+    </button>
+  </header>
 
-      </p>
+  <section class="card">
+    <h2>Resumo da análise</h2>
 
+    <div class="stats">
+      <div class="stat">
+        <strong id="totalPosts">0</strong>
+        Artigos analisados
+      </div>
+
+      <div class="stat">
+        <strong id="totalFindings">0</strong>
+        Possíveis conflitos
+      </div>
+
+      <div class="stat">
+        <strong id="totalProblems">0</strong>
+        Artigos com alertas
+      </div>
     </div>
 
-  `;
-
-}else{
-
-  try{
-
-    const data=
-      JSON.parse(raw);
-
-
-    const a=
-      data.analysis;
-
-
-    const s=
-      data.sync;
-
-
-    document.querySelector(
-      '#summary'
-    ).innerHTML=`
-
-      <b>
-        ${a.posts||0}
-      </b>
-
-      artigos analisados.
-
-      <br>
-
-      <span class="muted">
-
-        ${s.synced||0}
-        artigos sincronizados.
-
-      </span>
-
-      <br><br>
-
-      <span class="muted">
-
-        ${esc(
-          a.note||''
-        )}
-
-      </span>
-
-    `;
-
-
-    const articles=
-      a.articles||[];
-
-
-    document.querySelector(
-      '#result'
-    ).innerHTML=
-
-      articles.map(
-        (article,index)=>`
-
-        <div class="card">
-
-
-          <h2>
-
-            ${esc(
-              article.title||
-              'Artigo sem título'
-            )}
-
-          </h2>
-
-
-          <p>
-
-            <a
-              href="${esc(
-                article.url||'#'
-              )}"
-              target="_blank"
-              rel="noopener"
-            >
-
-              ${esc(
-                article.url||''
-              )}
-
-            </a>
-
-          </p>
-
-
-          ${
-            article.problems &&
-            article.problems.length
-
-            ?
-
-            article.problems.map(
-              problem=>`
-
-              <div class="problem">
-
-
-                <p>
-
-                  <b>
-                    ⚠️ Possível conflito:
-                  </b>
-
-                  ${esc(
-                    problem.risk||''
-                  )}
-
-                </p>
-
-
-                <p>
-
-                  <b>
-                    Score:
-                  </b>
-
-                  ${esc(
-                    problem.score
-                  )}
-
-                </p>
-
-
-                ${
-                  problem.relatedArticle
-
-                  ?
-
-                  `
-
-                  <p>
-
-                    <b>
-                      Artigo relacionado:
-                    </b>
-
-                    ${esc(
-                      problem
-                        .relatedArticle
-                        .title||''
-                    )}
-
-                  </p>
-
-
-                  <p>
-
-                    <a
-                      href="${esc(
-                        problem
-                          .relatedArticle
-                          .url||'#'
-                      )}"
-                      target="_blank"
-                      rel="noopener"
-                    >
-
-                      ${esc(
-                        problem
-                          .relatedArticle
-                          .url||''
-                      )}
-
-                    </a>
-
-                  </p>
-
-                  `
-
-                  :
-
-                  ''
-
-                }
-
-
-                <p>
-
-                  <b>
-                    Termos em comum:
-                  </b>
-
-                  ${esc(
-                    (
-                      problem
-                        .sharedTerms||[]
-                    ).join(', ')
-                  )}
-
-                </p>
-
-
-                <p>
-
-                  <b>
-                    Recomendação:
-                  </b>
-
-                  ${esc(
-                    problem
-                      .recommendation||''
-                  )}
-
-                </p>
-
-
-              </div>
-
-            `
-            ).join('')
-
-            :
-
-            `
-
-            <div class="good">
-
-              ✅ Nenhum possível conflito
-              encontrado neste artigo.
-
-            </div>
-
-            `
-
-          }
-
-
-          <div class="filebox">
-
-            <h3>
-              📄 Arquivo do artigo
-            </h3>
-
-
-            <p class="muted">
-
-              Baixe este artigo em HTML
-              para corrigir no ChatGPT.
-
-            </p>
-
-
-            <button
-              class="download download-file"
-              data-index="${index}"
-            >
-
-              Baixar HTML para correção
-
-            </button>
-
-
-          </div>
-
-
-          <button
-            class="secondary copy-problems"
-            data-title="${esc(
-              article.title||''
-            )}"
-            data-problems="${esc(
-              JSON.stringify(
-                article.problems||[]
-              )
-            )}"
-          >
-
-            Copiar problemas
-
-          </button>
-
-
-        </div>
-
-      `
-      ).join('');
-
-
-    /*
-    ==================================================
-    BOTÕES DE DOWNLOAD INDIVIDUAL
-    ==================================================
-    */
-
-    document
-      .querySelectorAll(
-        '.download-file'
-      )
-      .forEach(btn=>{
-
-        btn.onclick=()=>{
-
-          const article=
-            articles[
-              Number(
-                btn.dataset.index
-              )
-            ];
-
-
-          downloadCorrectionFile(
-            article
-          );
-
-        };
-
-      });
-
-
-    /*
-    ==================================================
-    COPIAR PROBLEMAS
-    ==================================================
-    */
-
-    document
-      .querySelectorAll(
-        '.copy-problems'
-      )
-      .forEach(btn=>{
-
-        btn.onclick=async()=>{
-
-          try{
-
-            const problems=
-              JSON.parse(
-                btn.dataset.problems||'[]'
-              );
-
-
-            const text=
-              problems.length
-
-              ?
-
-              problems.map(
-                (p,i)=>
-
-                `${i+1}. Possível conflito (${p.risk})
-Score: ${p.score}
-Artigo relacionado: ${p.relatedArticle?.title||''}
-Termos em comum: ${(p.sharedTerms||[]).join(', ')}
-Recomendação: ${p.recommendation||''}`
-
-              ).join('\n\n')
-
-              :
-
-              'Nenhum problema encontrado.';
-
-
-            await navigator
-              .clipboard
-              .writeText(
-
-                `Problemas do artigo: ${
-                  btn.dataset.title
-                }
-
-${text}`
-
-              );
-
-
-            btn.textContent=
-              'Copiado!';
-
-
-            setTimeout(()=>{
-
-              btn.textContent=
-                'Copiar problemas';
-
-            },1500);
-
-
-          }catch(e){
-
-            alert(
-              'Não foi possível copiar os problemas.'
-            );
-
-          }
-
-        };
-
-      });
-
-
-  }catch(e){
-
-    document.querySelector(
-      '#summary'
-    ).textContent=
-      'Erro ao carregar a análise.';
-
-
-    document.querySelector(
-      '#result'
-    ).innerHTML=`
-
-      <div class="card">
-
-        <p>
-
-          ${esc(
-            e.message
-          )}
-
-        </p>
-
-      </div>
-
-    `;
-
+    <p class="muted" id="blogInfo"></p>
+  </section>
+
+  <section class="card">
+    <h2>📦 Todos os artigos</h2>
+
+    <p>
+      Baixe todos os artigos sincronizados do blog em um único arquivo ZIP.
+      O pacote contém os arquivos HTML originais e um manifesto com os
+      identificadores e endereços dos artigos.
+    </p>
+
+    <button id="downloadAll" class="green">
+      📦 Baixar todos os artigos
+    </button>
+
+    <div id="downloadStatus" class="status hidden"></div>
+  </section>
+
+  <section class="card">
+    <h2>📄 Artigos analisados</h2>
+    <p class="muted">
+      Veja os possíveis conflitos encontrados e baixe artigos individuais.
+    </p>
+
+    <div id="articles">
+      Carregando análise...
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>📤 Enviar artigo corrigido</h2>
+
+    <p>
+      Selecione um arquivo HTML corrigido para visualizar antes de continuar.
+    </p>
+
+    <input
+      type="file"
+      id="correctedFile"
+      accept=".html,.htm"
+    >
+
+    <div id="uploadStatus" class="status hidden"></div>
+
+    <div id="previewArea" class="hidden">
+      <h3>Pré-visualização</h3>
+      <iframe
+        id="preview"
+        sandbox=""
+        title="Pré-visualização do artigo corrigido"
+      ></iframe>
+
+      <p class="muted">
+        Esta é apenas uma pré-visualização. Nenhuma alteração foi enviada
+        ao Blogger.
+      </p>
+
+      <button id="continueReview" class="orange">
+        Continuar para revisão
+      </button>
+    </div>
+  </section>
+
+  <p class="muted">
+    Importante: os downloads não alteram seus artigos no Blogger.
+    Qualquer publicação de conteúdo corrigido deverá exigir sua confirmação.
+  </p>
+
+</div>
+
+<script>
+(() => {
+  const STORAGE_KEY = 'bloggerSeoAnalysis';
+
+  let data;
+
+  try {
+    data = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
+  } catch {
+    data = null;
   }
 
-}
+  const analysis = data?.analysis || {};
+  const articles = Array.isArray(analysis.articles)
+    ? analysis.articles
+    : [];
 
+  const findings = Array.isArray(analysis.findings)
+    ? analysis.findings
+    : [];
 
-/*
-====================================================
-BOTÃO: BAIXAR TODOS OS ARTIGOS
-====================================================
-*/
+  const blogId = data?.blogId;
 
-document.querySelector(
-  '#downloadAll'
-).onclick=()=>{
+  const $ = id => document.getElementById(id);
 
-  const raw=
-    sessionStorage.getItem(
-      'bloggerSeoAnalysis'
-    );
+  $('totalPosts').textContent =
+    analysis.posts ?? articles.length;
 
+  $('totalFindings').textContent =
+    findings.length;
 
-  if(!raw){
+  $('totalProblems').textContent =
+    articles.filter(a =>
+      Array.isArray(a.problems) && a.problems.length > 0
+    ).length;
 
-    alert(
-      'Nenhuma análise disponível.'
-    );
+  $('blogInfo').textContent =
+    blogId ? 'Blog selecionado: ' + blogId : '';
 
-    return;
-
+  function showStatus(element, message, type = '') {
+    element.textContent = message;
+    element.className = 'status' + (type ? ' ' + type : '');
+    element.classList.remove('hidden');
   }
 
+  /*
+   * DOWNLOAD DE TODOS OS ARTIGOS EM ZIP
+   */
+  $('downloadAll').addEventListener('click', () => {
+    const button = $('downloadAll');
+    const status = $('downloadStatus');
 
-  try{
-
-    const data=
-      JSON.parse(raw);
-
-
-    const articles=
-      data.analysis?.articles||[];
-
-
-    if(!articles.length){
-
-      alert(
-        'Nenhum artigo encontrado nesta análise.'
+    if (!blogId) {
+      showStatus(
+        status,
+        'Não encontramos o identificador do blog. Volte à página inicial e faça a análise novamente.',
+        'error'
       );
-
       return;
-
     }
 
+    button.disabled = true;
+    button.textContent = 'Preparando arquivo ZIP...';
 
-    /*
-     * Nesta etapa apenas confirmamos que os
-     * artigos foram carregados.
-     *
-     * No próximo passo este botão será ligado
-     * ao backend para gerar o ZIP real.
-     */
-
-    document.querySelector(
-      '#downloadAllStatus'
-    ).innerHTML=`
-
-      <span class="success">
-
-        ✓ ${articles.length}
-        artigos encontrados.
-
-      </span>
-
-      <br>
-
-      <span class="muted">
-
-        O gerador do arquivo ZIP será conectado
-        na próxima etapa.
-
-      </span>
-
-    `;
-
-
-  }catch(e){
-
-    alert(
-      'Não foi possível preparar os artigos.'
+    showStatus(
+      status,
+      'Solicitando ao servidor todos os artigos sincronizados...'
     );
 
-  }
-
-};
-
-
-/*
-====================================================
-UPLOAD DO HTML CORRIGIDO
-====================================================
-*/
-
-document.querySelector(
-  '#correctedFile'
-).onchange=
-async(event)=>{
-
-
-  const file=
-    event.target.files[0];
-
-
-  if(!file){
-
-    return;
-
-  }
-
-
-  const status=
-    document.querySelector(
-      '#uploadStatus'
-    );
-
-
-  const preview=
-    document.querySelector(
-      '#previewBox'
-    );
-
-
-  try{
-
-
-    const filename=
-      file.name.toLowerCase();
-
-
-    if(
-      !filename.endsWith('.html') &&
-      !filename.endsWith('.htm')
-    ){
-
-      throw new Error(
-        'Selecione um arquivo HTML (.html ou .htm).'
-      );
-
-    }
-
-
-    status.textContent=
-      'Lendo arquivo corrigido...';
-
-
-    const html=
-      await file.text();
-
-
-    if(!html.trim()){
-
-      throw new Error(
-        'O arquivo está vazio.'
-      );
-
-    }
-
-
-    /*
-     * Guarda temporariamente o HTML corrigido.
-     *
-     * Ainda NÃO envia para o Blogger.
-     */
-
-    sessionStorage.setItem(
-      'bloggerCorrectedHtml',
-      html
-    );
-
-
-    sessionStorage.setItem(
-      'bloggerCorrectedFilename',
-      file.name
-    );
-
-
-    status.innerHTML=`
-
-      <span class="success">
-
-        ✓ Arquivo carregado com sucesso.
-
-      </span>
-
-    `;
-
-
-    preview.innerHTML=`
-
-      <div class="filebox">
-
-        <h3>
-          📄 Arquivo recebido
-        </h3>
-
-
-        <p>
-
-          <b>Nome:</b>
-
-          ${esc(
-            file.name
-          )}
-
-        </p>
-
-
-        <p>
-
-          <b>Tamanho:</b>
-
-          ${Math.round(
-            file.size/1024
-          )}
-
-          KB
-
-        </p>
-
-
-      </div>
-
-
-      <div class="card">
-
-        <h3>
-          👁️ Prévia do HTML corrigido
-        </h3>
-
-
-        <iframe
-          id="previewFrame"
-          class="preview"
-          sandbox=""
-        ></iframe>
-
-
-      </div>
-
-
-      <div class="card">
-
-        <p>
-
-          ⚠️
-
-          <b>
-            Importante:
-          </b>
-
-          esta é somente uma prévia.
-
-          O Blogger ainda não foi alterado.
-
-        </p>
-
-
-        <button
-          id="preparePublish"
-        >
-
-          Continuar para revisão
-
-        </button>
-
-
-      </div>
-
-    `;
-
-
-    const frame=
-      document.querySelector(
-        '#previewFrame'
-      );
-
-
-    frame.srcdoc=
-      html;
-
-
-    document
-      .querySelector(
-        '#preparePublish'
-      )
-      .onclick=()=>{
-
-        alert(
-          'Arquivo pronto para a próxima etapa. '+
-          'Ainda não foi publicado no Blogger.'
+    const url =
+      '/api/blogs/' +
+      encodeURIComponent(blogId) +
+      '/download-all';
+
+    fetch(url, {
+      method: 'GET',
+      credentials: 'same-origin'
+    })
+    .then(async response => {
+      if (!response.ok) {
+        let message = 'Não foi possível gerar o ZIP.';
+
+        try {
+          const result = await response.json();
+
+          if (result.message) {
+            message = result.message;
+          } else if (result.error === 'not_authenticated') {
+            message = 'Sua sessão expirou. Entre novamente na ferramenta.';
+          } else if (result.error === 'blog_not_found') {
+            message = 'Blog não encontrado na sua conta.';
+          } else if (result.error === 'no_posts') {
+            message = 'Nenhum artigo sincronizado. Sincronize o blog primeiro.';
+          }
+        } catch {}
+
+        throw new Error(message);
+      }
+
+      const contentType =
+        response.headers.get('content-type') || '';
+
+      if (!contentType.includes('application/zip')) {
+        throw new Error(
+          'O servidor não retornou um arquivo ZIP. Verifique o deploy.'
         );
+      }
 
-      };
+      return response.blob();
+    })
+    .then(blob => {
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
 
+      link.href = downloadUrl;
+      link.download = 'blogger-seo-artigos.zip';
 
-  }catch(e){
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
 
-    status.textContent='';
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 30000);
 
+      showStatus(
+        status,
+        'Download iniciado! Confira os arquivos baixados no seu dispositivo.',
+        'success'
+      );
+    })
+    .catch(error => {
+      showStatus(
+        status,
+        error.message || 'Erro ao baixar os artigos.',
+        'error'
+      );
+    })
+    .finally(() => {
+      button.disabled = false;
+      button.textContent = '📦 Baixar todos os artigos';
+    });
+  });
 
-    preview.innerHTML=`
+  /*
+   * DOWNLOAD DE ARTIGO INDIVIDUAL
+   */
+  function downloadArticle(article) {
+    const html =
+      article.content_html ||
+      article.contentHtml ||
+      '';
 
-      <div class="problem">
+    if (!html) {
+      alert(
+        'O conteúdo HTML deste artigo não está disponível na análise. Faça uma nova sincronização e análise.'
+      );
+      return;
+    }
 
-        ❌
+    const blob = new Blob(
+      [html],
+      { type: 'text/html;charset=utf-8' }
+    );
 
-        ${esc(
-          e.message
-        )}
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
 
-      </div>
+    link.href = url;
+    link.download =
+      'artigo-' + safeSlug(article.title) + '.html';
 
-    `;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
 
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   }
 
-};
+  function safeSlug(value) {
+    return String(value || 'artigo')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase()
+      .slice(0, 90) || 'artigo';
+  }
 
+  /*
+   * COPIAR PROBLEMAS DO ARTIGO
+   */
+  function copyProblems(article) {
+    const problems = article.problems || [];
 
-/*
-====================================================
-VOLTAR PARA A LISTA DE BLOGS
-====================================================
-*/
+    if (!problems.length) {
+      alert('Nenhum possível conflito encontrado neste artigo.');
+      return;
+    }
 
-document.querySelector(
-  '#back'
-).onclick=()=>{
+    const text = problems.map((p, index) => {
+      const related = p.relatedArticle || {};
 
-  window.location.href='/';
+      return [
+        'Problema ' + (index + 1),
+        'Risco: ' + (p.risk || 'Não informado'),
+        'Pontuação: ' + (p.score ?? 'Não informada'),
+        'Artigo relacionado: ' + (related.title || 'Não informado'),
+        'URL relacionada: ' + (related.url || 'Não informada'),
+        'Termos compartilhados: ' + (p.sharedTerms || []).join(', '),
+        'Recomendação: ' + (p.recommendation || 'Não informada')
+      ].join('\n');
+    }).join('\n\n');
 
-};
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => alert('Problemas copiados!'))
+        .catch(() => window.prompt('Copie o texto:', text));
+    } else {
+      window.prompt('Copie o texto:', text);
+    }
+  }
 
+  /*
+   * MOSTRAR ARTIGOS E CONFLITOS
+   */
+  function renderArticles() {
+    const container = $('articles');
+
+    if (!articles.length) {
+      container.textContent =
+        'Nenhum artigo encontrado. Volte e sincronize o blog novamente.';
+      return;
+    }
+
+    container.innerHTML = '';
+
+    articles.forEach(article => {
+      const card = document.createElement('div');
+      card.className = 'article';
+
+      const title = document.createElement('h3');
+      title.textContent = article.title || 'Artigo sem título';
+      card.appendChild(title);
+
+      if (article.url) {
+        const link = document.createElement('a');
+        link.href = article.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = article.url;
+        card.appendChild(link);
+      }
+
+      const problems = article.problems || [];
+
+      const summary = document.createElement('p');
+      summary.textContent =
+        problems.length
+          ? problems.length + ' possível(is) conflito(s) encontrado(s).'
+          : 'Nenhum possível conflito identificado.';
+      card.appendChild(summary);
+
+      problems.forEach(problem => {
+        const box = document.createElement('div');
+        box.className = 'problem';
+
+        const risk = document.createElement('p');
+        risk.textContent = 'Risco: ' + (problem.risk || 'Não informado');
+        box.appendChild(risk);
+
+        const score = document.createElement('p');
+        score.textContent = 'Pontuação: ' + (problem.score ?? 'Não informada');
+        box.appendChild(score);
+
+        const related = document.createElement('p');
+        related.textContent =
+          'Artigo relacionado: ' +
+          (problem.relatedArticle?.title || 'Não informado');
+        box.appendChild(related);
+
+        const terms = document.createElement('p');
+        terms.textContent =
+          'Termos compartilhados: ' +
+          (problem.sharedTerms || []).join(', ');
+        box.appendChild(terms);
+
+        const recommendation = document.createElement('p');
+        recommendation.textContent =
+          'Recomendação: ' +
+          (problem.recommendation || 'Revisar manualmente.');
+        box.appendChild(recommendation);
+
+        card.appendChild(box);
+      });
+
+      const downloadButton = document.createElement('button');
+      downloadButton.textContent = '⬇️ Baixar HTML deste artigo';
+      downloadButton.style.marginTop = '12px';
+      downloadButton.addEventListener('click', () => {
+        downloadArticle(article);
+      });
+
+      card.appendChild(downloadButton);
+
+      const copyButton = document.createElement('button');
+      copyButton.textContent = 'Copiar problemas';
+      copyButton.className = 'secondary';
+      copyButton.style.marginTop = '12px';
+      copyButton.style.marginLeft = '8px';
+      copyButton.addEventListener('click', () => {
+        copyProblems(article);
+      });
+
+      card.appendChild(copyButton);
+
+      container.appendChild(card);
+    });
+  }
+
+  renderArticles();
+
+  /*
+   * RECEBER HTML CORRIGIDO E MOSTRAR PRÉVIA
+   */
+  $('correctedFile').addEventListener('change', event => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const status = $('uploadStatus');
+
+    if (!/\.(html|htm)$/i.test(file.name)) {
+      showStatus(
+        status,
+        'Selecione um arquivo HTML.',
+        'error'
+      );
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showStatus(
+        status,
+        'O arquivo é muito grande. O limite desta prévia é 5 MB.',
+        'error'
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const html = String(reader.result || '');
+
+      sessionStorage.setItem(
+        'bloggerCorrectedHtml',
+        html
+      );
+
+      sessionStorage.setItem(
+        'bloggerCorrectedFilename',
+        file.name
+      );
+
+      $('preview').srcdoc = html;
+      $('previewArea').classList.remove('hidden');
+
+      showStatus(
+        status,
+        'Arquivo carregado: ' +
+        file.name +
+        ' (' +
+        Math.ceil(file.size / 1024) +
+        ' KB). Nenhuma publicação foi feita.',
+        'success'
+      );
+    };
+
+    reader.onerror = () => {
+      showStatus(
+        status,
+        'Não foi possível ler o arquivo.',
+        'error'
+      );
+    };
+
+    reader.readAsText(file);
+  });
+
+  $('continueReview').addEventListener('click', () => {
+    alert(
+      'O arquivo foi guardado para revisão nesta sessão. A importação em lote e a publicação no Blogger ainda precisam ser implementadas. Nenhum artigo foi alterado.'
+    );
+  });
+
+})();
 </script>
 
 </body>
-
-  </html>
+</html>
