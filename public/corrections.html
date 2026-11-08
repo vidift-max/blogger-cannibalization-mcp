@@ -1,0 +1,355 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lotes de correção — Blogger SEO Intelligence</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  padding:16px;
+  background:#f4f6fa;
+  color:#202938;
+  font-family:Arial,sans-serif
+}
+main{max-width:1000px;margin:auto}
+h1{font-size:23px}
+.card{
+  background:#fff;
+  padding:18px;
+  border-radius:12px;
+  margin:14px 0;
+  box-shadow:0 2px 8px #0000000c
+}
+button{
+  border:0;
+  border-radius:8px;
+  padding:12px 16px;
+  background:#2457d6;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+  margin:5px 4px 5px 0
+}
+button.secondary{background:#e8edf7;color:#26354d}
+input,select{
+  width:100%;
+  padding:12px;
+  border:1px solid #ccd3df;
+  border-radius:8px;
+  margin:8px 0 14px;
+  background:white
+}
+.batch{
+  border:1px solid #e0e5ed;
+  padding:15px;
+  border-radius:10px;
+  margin:12px 0
+}
+.batch h3{margin:0 0 8px;font-size:17px}
+.muted{color:#687386;font-size:13px}
+.status{
+  display:inline-block;
+  padding:5px 9px;
+  border-radius:20px;
+  background:#fff1cf;
+  color:#805500;
+  font-size:12px
+}
+.item{
+  border-top:1px solid #e5e9ef;
+  padding:12px 0
+}
+#message{white-space:pre-wrap;margin-top:12px}
+.hidden{display:none}
+</style>
+</head>
+
+<body>
+<main>
+
+<h1>📦 Lotes de correção</h1>
+<p class="muted">
+Organize as correções dos artigos em lotes separados e acompanhe o histórico.
+</p>
+
+<button class="secondary" onclick="location.href='/analysis.html'">
+← Voltar para análise
+</button>
+
+<section class="card">
+  <h2>➕ Criar novo lote</h2>
+
+  <label for="blogSelect">Blog</label>
+  <select id="blogSelect">
+    <option value="">Carregando blogs...</option>
+  </select>
+
+  <label for="batchName">Nome do lote</label>
+  <input
+    id="batchName"
+    type="text"
+    placeholder="Ex.: Correções de novembro — lote 1"
+  >
+
+  <button id="createBatch">Criar lote</button>
+  <p class="muted">
+    A criação do lote não altera nem publica artigos.
+  </p>
+</section>
+
+<section class="card">
+  <h2>📚 Histórico de lotes</h2>
+  <button id="refresh">↻ Atualizar lotes</button>
+  <div id="batchList">Carregando...</div>
+</section>
+
+<section class="card hidden" id="detailCard">
+  <h2 id="detailTitle">Detalhes do lote</h2>
+  <div id="detailInfo"></div>
+  <div id="detailItems"></div>
+</section>
+
+<p id="message" class="muted"></p>
+
+</main>
+
+<script>
+const API = '/api';
+
+const blogSelect = document.getElementById('blogSelect');
+const batchList = document.getElementById('batchList');
+const message = document.getElementById('message');
+const detailCard = document.getElementById('detailCard');
+
+let blogs = [];
+
+function csrfToken(){
+  const match = document.cookie.match(/(?:^|;\s*)csrf=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+async function api(path, options = {}){
+  const headers = {
+    ...(options.headers || {})
+  };
+
+  if(options.method && options.method !== 'GET'){
+    headers['Content-Type'] = 'application/json';
+    headers['x-csrf-token'] = csrfToken();
+  }
+
+  const response = await fetch(API + path, {
+    credentials:'same-origin',
+    ...options,
+    headers
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if(!response.ok){
+    throw new Error(data.error || data.message || `Erro HTTP ${response.status}`);
+  }
+
+  return data;
+}
+
+function showMessage(text, error = false){
+  message.textContent = text;
+  message.style.color = error ? '#b42318' : '#287443';
+}
+
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  })[char]);
+}
+
+async function loadBlogs(){
+  const data = await api('/blogs');
+
+  blogs = Array.isArray(data) ? data :
+    Array.isArray(data.blogs) ? data.blogs :
+    Array.isArray(data.items) ? data.items : [];
+
+  blogSelect.innerHTML = '';
+
+  if(!blogs.length){
+    blogSelect.innerHTML = '<option value="">Nenhum blog encontrado</option>';
+    return;
+  }
+
+  blogs.forEach(blog => {
+    const option = document.createElement('option');
+    option.value = blog.id;
+    option.textContent = blog.name || blog.url || `Blog ${blog.id}`;
+    blogSelect.appendChild(option);
+  });
+
+  const params = new URLSearchParams(location.search);
+  const requestedBlog = params.get('blogId');
+
+  if(requestedBlog && blogs.some(b => String(b.id) === requestedBlog)){
+    blogSelect.value = requestedBlog;
+  }
+
+  await loadBatches();
+}
+
+async function loadBatches(){
+  const blogId = blogSelect.value;
+
+  if(!blogId){
+    batchList.textContent = 'Selecione um blog.';
+    return;
+  }
+
+  batchList.textContent = 'Carregando lotes...';
+  detailCard.classList.add('hidden');
+
+  try{
+    const data = await api(
+      `/correction-batches?blogId=${encodeURIComponent(blogId)}`
+    );
+
+    const batches = Array.isArray(data) ? data :
+      Array.isArray(data.batches) ? data.batches :
+      Array.isArray(data.items) ? data.items : [];
+
+    if(!batches.length){
+      batchList.innerHTML =
+        '<p class="muted">Nenhum lote criado para este blog.</p>';
+      return;
+    }
+
+    batchList.innerHTML = '';
+
+    batches.forEach(batch => {
+      const div = document.createElement('div');
+      div.className = 'batch';
+
+      const date = batch.created_at
+        ? new Date(batch.created_at).toLocaleString('pt-BR')
+        : 'Data não informada';
+
+      div.innerHTML = `
+        <h3>${escapeHtml(batch.name || `Lote #${batch.id}`)}</h3>
+        <p class="muted">Criado em: ${escapeHtml(date)}</p>
+        <p>
+          Artigos: <strong>${Number(batch.total_items || 0)}</strong>
+          · Pendentes: <strong>${Number(batch.pending_items || 0)}</strong>
+          · Aprovados: <strong>${Number(batch.approved_items || 0)}</strong>
+          · Publicados: <strong>${Number(batch.published_items || 0)}</strong>
+        </p>
+        <span class="status">${escapeHtml(batch.status || 'pending')}</span>
+        <br>
+        <button class="secondary" data-open="${escapeHtml(batch.id)}">
+          Abrir lote
+        </button>
+      `;
+
+      batchList.appendChild(div);
+    });
+
+    batchList.querySelectorAll('[data-open]').forEach(button => {
+      button.addEventListener('click', () => {
+        openBatch(button.dataset.open);
+      });
+    });
+
+  }catch(error){
+    batchList.textContent = 'Não foi possível carregar os lotes: ' + error.message;
+  }
+}
+
+async function createBatch(){
+  const blogId = blogSelect.value;
+  const name = document.getElementById('batchName').value.trim();
+
+  if(!blogId){
+    showMessage('Selecione um blog.', true);
+    return;
+  }
+
+  if(!name){
+    showMessage('Digite um nome para o lote.', true);
+    return;
+  }
+
+  try{
+    showMessage('Criando lote...');
+
+    await api('/correction-batches', {
+      method:'POST',
+      body:JSON.stringify({blogId, name})
+    });
+
+    document.getElementById('batchName').value = '';
+    showMessage('Lote criado com sucesso.');
+    await loadBatches();
+
+  }catch(error){
+    showMessage('Erro ao criar lote: ' + error.message, true);
+  }
+}
+
+async function openBatch(batchId){
+  try{
+    showMessage('Carregando detalhes do lote...');
+
+    const data = await api(`/correction-batches/${batchId}`);
+    const batch = data.batch || data;
+    const items = Array.isArray(data.items) ? data.items :
+      Array.isArray(batch.items) ? batch.items : [];
+
+    document.getElementById('detailTitle').textContent =
+      batch.name || `Lote #${batch.id}`;
+
+    document.getElementById('detailInfo').innerHTML = `
+      <p class="muted">Lote #${escapeHtml(batch.id)}</p>
+      <p>Artigos neste lote: <strong>${items.length}</strong></p>
+      <p class="muted">
+        Esta tela apenas exibe os itens organizados no lote.
+      </p>
+    `;
+
+    const container = document.getElementById('detailItems');
+
+    if(!items.length){
+      container.innerHTML =
+        '<p class="muted">Este lote ainda não possui artigos.</p>';
+    }else{
+      container.innerHTML = items.map(item => `
+        <div class="item">
+          <strong>${escapeHtml(item.title || item.post_title || `Artigo #${item.post_id || item.id}`)}</strong>
+          <p class="muted">Status: ${escapeHtml(item.status || 'pending')}</p>
+        </div>
+      `).join('');
+    }
+
+    detailCard.classList.remove('hidden');
+    showMessage('');
+
+  }catch(error){
+    showMessage('Erro ao abrir lote: ' + error.message, true);
+  }
+}
+
+document.getElementById('createBatch').addEventListener('click', createBatch);
+document.getElementById('refresh').addEventListener('click', loadBatches);
+blogSelect.addEventListener('change', loadBatches);
+
+loadBlogs().catch(error => {
+  batchList.textContent = 'Erro ao carregar: ' + error.message;
+  showMessage('Verifique se você está conectado ao sistema.', true);
+});
+</script>
+</body>
+</html>
