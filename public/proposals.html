@@ -27,6 +27,8 @@ button:disabled{opacity:.5}
 .pending{background:#fef3c7;color:#92400e}
 .applied{background:#dcfce7;color:#166534}
 .rejected{background:#fee2e2;color:#991b1b}
+.change-count{display:inline-block;margin:9px 0;padding:7px 10px;border-radius:7px;background:#eff6ff;color:#1e40af;font-size:13px;font-weight:bold}
+.change-count.zero{background:#f1f5f9;color:#475569}
 textarea{width:100%;min-height:260px;padding:12px;border:1px solid #cbd5e1;border-radius:8px;font-family:monospace;font-size:12px;resize:vertical}
 .comparison{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .hidden{display:none}
@@ -50,29 +52,26 @@ a{color:#2563eb;overflow-wrap:anywhere}
 
 <section class="card">
 <h2>Propostas recebidas</h2>
-<p class="muted">Abra cada proposta para comparar o conteúdo original com o corrigido.</p>
+<p class="muted">Confira quantos trechos foram alterados e abra cada proposta para comparar o conteúdo original com o corrigido.</p>
 <div id="proposals">Carregando...</div>
 </section>
 
 <section id="detail" class="card hidden">
 <h2 id="detailTitle">Comparar artigo</h2>
 <p id="detailInfo" class="muted"></p>
+<div id="detailChanges" class="change-count"></div>
 
 <div class="comparison">
 <div>
 <h3>Artigo original</h3>
 <textarea id="original" readonly></textarea>
-<button id="copyOriginal" class="copy-button" type="button">
-📋 Copiar HTML original
-</button>
+<button id="copyOriginal" class="copy-button" type="button">📋 Copiar HTML original</button>
 </div>
 
 <div>
 <h3>Artigo corrigido</h3>
 <textarea id="corrected" readonly></textarea>
-<button id="copyCorrected" class="copy-button" type="button">
-📋 Copiar HTML corrigido
-</button>
+<button id="copyCorrected" class="copy-button" type="button">📋 Copiar HTML corrigido</button>
 </div>
 </div>
 
@@ -113,6 +112,18 @@ function showDetailMessage(message, type = '') {
   el.textContent = message;
   el.className = 'status' + (type ? ' ' + type : '');
   el.classList.remove('hidden');
+}
+
+function changeCountText(value) {
+  const count = Number(value);
+
+  if (!Number.isFinite(count) || count < 0) {
+    return 'Contagem não disponível';
+  }
+
+  return count + (count === 1
+    ? ' trecho alterado'
+    : ' trechos alterados');
 }
 
 async function copyHTML(fieldId, buttonId, originalText) {
@@ -193,11 +204,17 @@ async function loadProposals() {
     const applied = proposals.filter(p => p.status === 'applied').length;
     const rejected = proposals.filter(p => p.status === 'rejected').length;
 
+    const totalChanges = proposals.reduce((sum, p) => {
+      const count = Number(p.change_count);
+      return sum + (Number.isFinite(count) && count > 0 ? count : 0);
+    }, 0);
+
     $('summary').textContent =
       'Total: ' + proposals.length +
       ' | Pendentes: ' + pending +
       ' | Publicadas: ' + applied +
-      ' | Rejeitadas: ' + rejected;
+      ' | Rejeitadas: ' + rejected +
+      ' | Trechos alterados: ' + totalChanges;
 
     renderProposals();
   } catch (error) {
@@ -228,6 +245,15 @@ function renderProposals() {
     badge.textContent = statusLabel(proposal.status);
     card.appendChild(badge);
 
+    const changes = document.createElement('div');
+    const count = Number(proposal.change_count);
+
+    changes.className = 'change-count' +
+      (Number.isFinite(count) && count > 0 ? '' : ' zero');
+
+    changes.textContent = '✏️ ' + changeCountText(proposal.change_count);
+    card.appendChild(changes);
+
     const info = document.createElement('p');
     info.className = 'muted';
     info.textContent = 'Proposta #' + proposal.id;
@@ -256,6 +282,7 @@ async function openProposal(id) {
   $('detail').classList.remove('hidden');
   $('detailTitle').textContent = 'Carregando proposta #' + id;
   $('detailStatus').classList.add('hidden');
+  $('detailChanges').textContent = '';
   $('actions').classList.add('hidden');
 
   $('original').value = '';
@@ -282,6 +309,12 @@ async function openProposal(id) {
       'Proposta #' + currentProposal.id +
       ' | Situação: ' + statusLabel(currentProposal.status) +
       (currentProposal.url ? ' | ' + currentProposal.url : '');
+
+    $('detailChanges').textContent =
+      '✏️ ' + changeCountText(currentProposal.change_count);
+
+    $('detailChanges').className = 'change-count' +
+      (Number(currentProposal.change_count) > 0 ? '' : ' zero');
 
     $('original').value = currentProposal.previous_html || '';
     $('corrected').value = currentProposal.proposed_html || '';
