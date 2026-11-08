@@ -186,9 +186,9 @@ router.post('/blogs/:blogId/sync', currentUser, requireCsrf, async (req, res, ne
 router.post('/blogs/:blogId/analyze', currentUser, requireCsrf, async (req, res, next) => {
   try {
     const r = await query(
-      `SELECT p.id,p.title,p.url,p.content_text FROM posts p
-       JOIN blogs b ON b.id=p.blog_id
-       WHERE p.blog_id=$1 AND p.user_id=$2 AND b.user_id=$2`,
+      `SELECT p.id,p.title,p.url,p.content_html,p.content_text FROM posts p
+ JOIN blogs b ON b.id=p.blog_id
+ WHERE p.blog_id=$1 AND p.user_id=$2 AND b.user_id=$2`,
       [req.params.blogId, req.user.id]
     );
     if (!r.rowCount) {
