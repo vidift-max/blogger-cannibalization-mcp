@@ -35,6 +35,7 @@ button{
   margin:5px 4px 5px 0
 }
 button.secondary{background:#e8edf7;color:#26354d}
+button:disabled{opacity:.5;cursor:not-allowed}
 input,select{
   width:100%;
   padding:12px;
@@ -59,12 +60,44 @@ input,select{
   color:#805500;
   font-size:12px
 }
+.status.approved,.status.applied{
+  background:#dff6e7;
+  color:#176b37
+}
+.status.rejected{
+  background:#fde5e5;
+  color:#a32626
+}
 .item{
-  border-top:1px solid #e5e9ef;
-  padding:12px 0
+  border:1px solid #e5e9ef;
+  border-radius:10px;
+  padding:14px;
+  margin:12px 0
+}
+.item h3{font-size:16px;margin:0 0 8px}
+.item-actions{margin-top:12px}
+.file-label{
+  display:block;
+  font-size:13px;
+  font-weight:bold;
+  margin-top:12px
+}
+.file-input{margin-bottom:5px}
+.item-message{
+  font-size:13px;
+  white-space:pre-wrap;
+  margin-top:8px
 }
 #message{white-space:pre-wrap;margin-top:12px}
 .hidden{display:none}
+.notice{
+  background:#eef4ff;
+  border:1px solid #d5e2ff;
+  padding:12px;
+  border-radius:8px;
+  font-size:13px;
+  line-height:1.5
+}
 </style>
 </head>
 
@@ -96,6 +129,7 @@ Organize as correções dos artigos em lotes separados e acompanhe o histórico.
   >
 
   <button id="createBatch">Criar lote</button>
+
   <p class="muted">
     A criação do lote não altera nem publica artigos.
   </p>
@@ -110,6 +144,16 @@ Organize as correções dos artigos em lotes separados e acompanhe o histórico.
 <section class="card hidden" id="detailCard">
   <h2 id="detailTitle">Detalhes do lote</h2>
   <div id="detailInfo"></div>
+
+  <div class="notice">
+    <strong>Como funciona:</strong><br>
+    1. Baixe o HTML original do artigo.<br>
+    2. Faça as alterações no arquivo.<br>
+    3. Selecione o HTML corrigido e envie.<br>
+    4. O sistema criará uma proposta pendente.<br><br>
+    Nenhum artigo será publicado automaticamente no Blogger.
+  </div>
+
   <div id="detailItems"></div>
 </section>
 
@@ -126,6 +170,7 @@ const message = document.getElementById('message');
 const detailCard = document.getElementById('detailCard');
 
 let blogs = [];
+let currentBatchId = null;
 
 function csrfToken(){
   const match = document.cookie.match(/(?:^|;\s*)csrf=([^;]+)/);
@@ -151,7 +196,9 @@ async function api(path, options = {}){
   const data = await response.json().catch(() => ({}));
 
   if(!response.ok){
-    throw new Error(data.error || data.message || `Erro HTTP ${response.status}`);
+    throw new Error(
+      data.error || data.message || `Erro HTTP ${response.status}`
+    );
   }
 
   return data;
@@ -172,6 +219,18 @@ function escapeHtml(value){
   })[char]);
 }
 
+function statusLabel(status){
+  const labels = {
+    pending:'Pendente',
+    approved:'Aprovado',
+    applied:'Publicado',
+    restored:'Restaurado',
+    rejected:'Rejeitado'
+  };
+
+  return labels[status] || status || 'Pendente';
+}
+
 async function loadBlogs(){
   const data = await api('/blogs');
 
@@ -182,7 +241,8 @@ async function loadBlogs(){
   blogSelect.innerHTML = '';
 
   if(!blogs.length){
-    blogSelect.innerHTML = '<option value="">Nenhum blog encontrado</option>';
+    blogSelect.innerHTML =
+      '<option value="">Nenhum blog encontrado</option>';
     return;
   }
 
@@ -213,6 +273,7 @@ async function loadBatches(){
 
   batchList.textContent = 'Carregando lotes...';
   detailCard.classList.add('hidden');
+  currentBatchId = null;
 
   try{
     const data = await api(
@@ -248,7 +309,7 @@ async function loadBatches(){
           · Aprovados: <strong>${Number(batch.approved_items || 0)}</strong>
           · Publicados: <strong>${Number(batch.published_items || 0)}</strong>
         </p>
-        <span class="status">${escapeHtml(batch.status || 'pending')}</span>
+        <span class="status">${escapeHtml(statusLabel(batch.status))}</span>
         <br>
         <button class="secondary" data-open="${escapeHtml(batch.id)}">
           Abrir lote
@@ -265,7 +326,8 @@ async function loadBatches(){
     });
 
   }catch(error){
-    batchList.textContent = 'Não foi possível carregar os lotes: ' + error.message;
+    batchList.textContent =
+      'Não foi possível carregar os lotes: ' + error.message;
   }
 }
 
@@ -300,6 +362,97 @@ async function createBatch(){
   }
 }
 
+function downloadOriginal(item){
+  const html = item.original_html || item.content_html;
+
+  if(!html){
+    alert(
+      'O HTML original não foi disponibilizado nos detalhes deste lote.'
+    );
+    return;
+  }
+
+  const blob = new Blob(
+    [html],
+    {type:'text/html;charset=utf-8'}
+  );
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = `artigo-${item.blogger_post_id || item.post_id || item.id}.html`;
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function uploadCorrection(batchId, itemId, input, feedback){
+  const file = input.files && input.files[0];
+
+  if(!file){
+    feedback.textContent = 'Selecione um arquivo HTML.';
+    feedback.style.color = '#b42318';
+    return;
+  }
+
+  if(!file.name.toLowerCase().endsWith('.html') &&
+     file.type !== 'text/html'){
+    feedback.textContent = 'Selecione um arquivo .html.';
+    feedback.style.color = '#b42318';
+    return;
+  }
+
+  if(file.size > 1024 * 1024){
+    feedback.textContent = 'O arquivo ultrapassa o limite de 1 MB.';
+    feedback.style.color = '#b42318';
+    return;
+  }
+
+  try{
+    feedback.textContent = 'Lendo arquivo...';
+    feedback.style.color = '#687386';
+
+    const html = await file.text();
+
+    if(!html.trim()){
+      throw new Error('O arquivo está vazio.');
+    }
+
+    if(!/<html[\s>]/i.test(html)){
+      throw new Error(
+        'O arquivo não parece conter um documento HTML completo.'
+      );
+    }
+
+    feedback.textContent = 'Enviando correção...';
+
+    const result = await api(
+      `/correction-batches/${encodeURIComponent(batchId)}/items/${encodeURIComponent(itemId)}/proposal`,
+      {
+        method:'POST',
+        body:JSON.stringify({html})
+      }
+    );
+
+    feedback.textContent =
+      result.message ||
+      'Proposta criada com sucesso. Aguardando aprovação.';
+
+    feedback.style.color = '#287443';
+
+    await openBatch(batchId);
+    await loadBatches();
+
+  }catch(error){
+    feedback.textContent = 'Erro: ' + error.message;
+    feedback.style.color = '#b42318';
+  }
+}
+
 async function openBatch(batchId){
   try{
     showMessage('Carregando detalhes do lote...');
@@ -309,6 +462,8 @@ async function openBatch(batchId){
     const items = Array.isArray(data.items) ? data.items :
       Array.isArray(batch.items) ? batch.items : [];
 
+    currentBatchId = batchId;
+
     document.getElementById('detailTitle').textContent =
       batch.name || `Lote #${batch.id}`;
 
@@ -316,7 +471,7 @@ async function openBatch(batchId){
       <p class="muted">Lote #${escapeHtml(batch.id)}</p>
       <p>Artigos neste lote: <strong>${items.length}</strong></p>
       <p class="muted">
-        Esta tela apenas exibe os itens organizados no lote.
+        Baixe o original, edite o arquivo e envie a versão corrigida.
       </p>
     `;
 
@@ -326,13 +481,107 @@ async function openBatch(batchId){
       container.innerHTML =
         '<p class="muted">Este lote ainda não possui artigos.</p>';
     }else{
-      container.innerHTML = items.map(item => `
-        <div class="item">
-          <strong>${escapeHtml(item.title || item.post_title || `Artigo #${item.post_id || item.id}`)}</strong>
-          <p class="muted">Status: ${escapeHtml(item.status || 'pending')}</p>
-        </div>
-      `).join('');
+      container.innerHTML = items.map(item => {
+        const proposalStatus =
+          item.proposal_status || item.status || 'pending';
+
+        const changeCount = Number(item.change_count || 0);
+        const hasOriginal = Boolean(
+          item.original_html || item.content_html
+        );
+
+        const hasProposal = Boolean(item.proposal_id);
+
+        return `
+          <div class="item">
+            <h3>
+              ${escapeHtml(
+                item.title ||
+                item.post_title ||
+                `Artigo #${item.post_id || item.id}`
+              )}
+            </h3>
+
+            <p class="muted">
+              ID do artigo: ${escapeHtml(
+                item.blogger_post_id || item.post_id || 'Não informado'
+              )}
+            </p>
+
+            <p>
+              Status:
+              <span class="status ${escapeHtml(proposalStatus)}">
+                ${escapeHtml(statusLabel(proposalStatus))}
+              </span>
+            </p>
+
+            ${
+              hasProposal
+                ? `<p class="muted">Alterações detectadas: <strong>${changeCount}</strong></p>`
+                : '<p class="muted">Nenhuma proposta enviada neste item.</p>'
+            }
+
+            <div class="item-actions">
+              <button
+                class="secondary"
+                data-download="${escapeHtml(item.id)}"
+                ${hasOriginal ? '' : 'disabled'}
+              >
+                ⬇ Baixar HTML original
+              </button>
+            </div>
+
+            <label class="file-label">
+              Selecionar HTML corrigido
+            </label>
+
+            <input
+              class="file-input"
+              type="file"
+              accept=".html,text/html"
+              data-file="${escapeHtml(item.id)}"
+            >
+
+            <button
+              data-upload="${escapeHtml(item.id)}"
+              ${hasProposal && ['pending','applied'].includes(proposalStatus) ? 'disabled' : ''}
+            >
+              Enviar correção
+            </button>
+
+            <p class="item-message" data-feedback="${escapeHtml(item.id)}"></p>
+          </div>
+        `;
+      }).join('');
     }
+
+    container.querySelectorAll('[data-download]').forEach(button => {
+      button.addEventListener('click', () => {
+        const item = items.find(
+          entry => String(entry.id) === button.dataset.download
+        );
+
+        if(item) downloadOriginal(item);
+      });
+    });
+
+    container.querySelectorAll('[data-upload]').forEach(button => {
+      button.addEventListener('click', () => {
+        const itemId = button.dataset.upload;
+
+        const input = container.querySelector(
+          `[data-file="${CSS.escape(itemId)}"]`
+        );
+
+        const feedback = container.querySelector(
+          `[data-feedback="${CSS.escape(itemId)}"]`
+        );
+
+        if(input && feedback){
+          uploadCorrection(batchId, itemId, input, feedback);
+        }
+      });
+    });
 
     detailCard.classList.remove('hidden');
     showMessage('');
@@ -342,13 +591,20 @@ async function openBatch(batchId){
   }
 }
 
-document.getElementById('createBatch').addEventListener('click', createBatch);
-document.getElementById('refresh').addEventListener('click', loadBatches);
+document.getElementById('createBatch')
+  .addEventListener('click', createBatch);
+
+document.getElementById('refresh')
+  .addEventListener('click', loadBatches);
+
 blogSelect.addEventListener('change', loadBatches);
 
 loadBlogs().catch(error => {
   batchList.textContent = 'Erro ao carregar: ' + error.message;
-  showMessage('Verifique se você está conectado ao sistema.', true);
+  showMessage(
+    'Verifique se você está conectado ao sistema.',
+    true
+  );
 });
 </script>
 </body>
