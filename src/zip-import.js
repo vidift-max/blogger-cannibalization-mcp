@@ -3,6 +3,7 @@ import express from 'express';
 import multer from 'multer';
 import yauzl from 'yauzl';
 import { pool, query } from './db.js';
+import { countChangedSections } from './diff-count.js';
 
 const MAX_ZIP = 50 * 1024 * 1024;
 const MAX_TOTAL = 100 * 1024 * 1024;
@@ -43,6 +44,7 @@ function readZip(buffer) {
       }
 
       zip.on('error', () => fail('Erro ao ler o ZIP.'));
+
       zip.on('end', () => {
         if (!finished) {
           finished = true;
@@ -388,20 +390,29 @@ export function createZipImportRouter({
         const created = [];
 
         for (const item of items) {
+          const previousHtml = item.post.content_html || '';
+
+          const changeCount = countChangedSections(
+            previousHtml,
+            item.html
+          );
+
           const result = await client.query(
             `INSERT INTO post_backups(
                user_id,
                post_id,
                previous_html,
-               proposed_html
+               proposed_html,
+               change_count
              )
-             VALUES($1,$2,$3,$4)
-             RETURNING id,status,created_at`,
+             VALUES($1,$2,$3,$4,$5)
+             RETURNING id,status,created_at,change_count`,
             [
               req.user.id,
               item.post.id,
-              item.post.content_html || '',
-              item.html
+              previousHtml,
+              item.html,
+              changeCount
             ]
           );
 
@@ -410,7 +421,8 @@ export function createZipImportRouter({
             postId: item.post.id,
             title: item.post.title,
             url: item.post.url,
-            status: result.rows[0].status
+            status: result.rows[0].status,
+            changeCount: result.rows[0].change_count
           });
         }
 
@@ -452,6 +464,7 @@ export function createZipImportRouter({
              pb.status,
              pb.previous_html,
              pb.proposed_html,
+             pb.change_count,
              pb.created_at,
              p.title,
              p.url
