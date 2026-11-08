@@ -12,17 +12,8 @@
   color:#172033;
   background:#f4f6fa
 }
-
-body{
-  margin:0
-}
-
-.wrap{
-  max-width:980px;
-  margin:32px auto;
-  padding:18px
-}
-
+body{margin:0}
+.wrap{max-width:980px;margin:32px auto;padding:18px}
 .card{
   background:#fff;
   border:1px solid #e1e5ec;
@@ -30,7 +21,6 @@ body{
   padding:20px;
   margin:14px 0
 }
-
 button,.btn{
   background:#175cd3;
   color:white;
@@ -42,40 +32,15 @@ button,.btn{
   display:inline-block;
   margin:4px 4px 4px 0
 }
-
-button.secondary{
-  background:#475467
-}
-
-button:disabled{
-  opacity:.6;
-  cursor:not-allowed
-}
-
-.muted{
-  color:#667085
-}
-
-pre{
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
-  background:#f8fafc;
-  padding:12px;
-  border-radius:8px
-}
-
+button.secondary{background:#475467}
+button:disabled{opacity:.6;cursor:not-allowed}
+.muted{color:#667085}
 .blog{
   border-top:1px solid #eaecf0;
   padding:12px 0
 }
-
-.status{
-  padding:8px 0
-}
-
-a{
-  overflow-wrap:anywhere
-}
+.status{padding:8px 0}
+a{overflow-wrap:anywhere}
 </style>
 </head>
 
@@ -107,6 +72,7 @@ Nenhum conteúdo será alterado sem aprovação.
 
 </section>
 
+
 <section class="card" id="app" hidden>
 
 <h2>Seus blogs</h2>
@@ -123,25 +89,10 @@ Sair
 
 <div id="blogs"></div>
 
-<h2>Resultado da análise</h2>
-
-<div id="result">
-  <p class="muted">
-    Sincronize um blog para começar.
-  </p>
-</div>
-
-<h2>Propostas e backups</h2>
-
-<button id="proposals" class="secondary">
-Ver propostas
-</button>
-
-<div id="proposalList"></div>
-
 </section>
 
 </main>
+
 
 <script>
 
@@ -155,38 +106,26 @@ async function api(path,opts={}){
     ...(opts.headers||{})
   };
 
-  if(
-    opts.method &&
-    opts.method!=='GET' &&
-    csrf
-  ){
+  if(opts.method && opts.method!=='GET' && csrf){
     headers['x-csrf-token']=csrf;
   }
 
-  const r=await fetch(
-    '/api'+path,
-    {
-      ...opts,
-      headers
-    }
-  );
+  const r=await fetch('/api'+path,{
+    ...opts,
+    headers
+  });
 
-  const data=await r.json().catch(
-    ()=>({})
-  );
+  const data=await r.json().catch(()=>({}));
 
   if(!r.ok){
-
     throw Error(
       data.message ||
       data.error ||
       'Falha na solicitação'
     );
-
   }
 
   return data;
-
 }
 
 
@@ -221,9 +160,9 @@ async function init(){
     document.querySelector('#welcome').textContent=
       'Conectado como '+me.user.email;
 
-  }catch{
+  }catch(e){
 
-    return;
+    // Usuário ainda não conectado.
 
   }
 
@@ -259,346 +198,69 @@ document.querySelector('#load').onclick=async()=>{
       ).join('');
 
 
-    document
-      .querySelectorAll('.sync')
-      .forEach(btn=>{
+    document.querySelectorAll('.sync').forEach(btn=>{
 
-        btn.onclick=async()=>{
+      btn.onclick=async()=>{
 
-          try{
+        try{
 
-            btn.disabled=true;
+          btn.disabled=true;
 
-            btn.textContent=
-              'Sincronizando...';
+          btn.textContent='Sincronizando...';
 
 
-            const s=await api(
-              `/blogs/${btn.dataset.id}/sync`,
-              {
-                method:'POST'
-              }
-            );
+          const s=await api(
+            `/blogs/${btn.dataset.id}/sync`,
+            {
+              method:'POST'
+            }
+          );
 
 
-            btn.textContent=
-              'Analisando...';
+          btn.textContent='Analisando...';
 
 
-            const a=await api(
-              `/blogs/${btn.dataset.id}/analyze`,
-              {
-                method:'POST'
-              }
-            );
+          const a=await api(
+            `/blogs/${btn.dataset.id}/analyze`,
+            {
+              method:'POST'
+            }
+          );
 
 
-            const result=
-              document.querySelector('#result');
+          /*
+           * Guarda o resultado temporariamente
+           * para a nova tela de análise.
+           */
+          sessionStorage.setItem(
+            'bloggerSeoAnalysis',
+            JSON.stringify({
+              analysis:a,
+              sync:s,
+              blogId:btn.dataset.id
+            })
+          );
 
 
-            result.innerHTML=`
+          /*
+           * Abre uma nova página de verdade.
+           */
+          window.location.href='/analysis.html';
 
-              <div class="card">
 
-                <h3>Análise concluída</h3>
+        }catch(e){
 
-                <p>
-                  <b>${a.posts}</b>
-                  artigos analisados.
-                </p>
+          alert(e.message);
 
-                <p class="muted">
-                  ${esc(a.note)}
-                </p>
+          btn.disabled=false;
 
-                <p class="muted">
-                  ${s.synced}
-                  artigos sincronizados.
-                </p>
+          btn.textContent='Sincronizar e analisar';
 
-              </div>
+        }
 
+      };
 
-              ${(a.articles || []).map(
-                article=>`
-
-                <div class="card">
-
-                  <h3>
-                    ${esc(
-                      article.title ||
-                      'Artigo sem título'
-                    )}
-                  </h3>
-
-
-                  <p>
-
-                    <a
-                      href="${esc(
-                        article.url || '#'
-                      )}"
-                      target="_blank"
-                      rel="noopener"
-                    >
-                      ${esc(
-                        article.url || ''
-                      )}
-                    </a>
-
-                  </p>
-
-
-                  ${
-                    article.problems &&
-                    article.problems.length
-
-                    ?
-
-                    article.problems.map(
-                      problem=>`
-
-                      <div class="blog">
-
-                        <p>
-
-                          <b>Problema:</b>
-                          possível conflito
-                          (${esc(
-                            problem.risk
-                          )})
-
-                        </p>
-
-
-                        <p>
-
-                          <b>Score:</b>
-                          ${esc(
-                            problem.score
-                          )}
-
-                        </p>
-
-
-                        ${
-                          problem.relatedArticle
-
-                          ?
-
-                          `
-
-                          <p>
-
-                            <b>
-                              Artigo relacionado:
-                            </b>
-
-                            ${esc(
-                              problem
-                                .relatedArticle
-                                .title || ''
-                            )}
-
-                          </p>
-
-
-                          <p>
-
-                            <a
-                              href="${esc(
-                                problem
-                                  .relatedArticle
-                                  .url || '#'
-                              )}"
-                              target="_blank"
-                              rel="noopener"
-                            >
-                              ${esc(
-                                problem
-                                  .relatedArticle
-                                  .url || ''
-                              )}
-                            </a>
-
-                          </p>
-
-                          `
-
-                          :
-
-                          ''
-                        }
-
-
-                        <p>
-
-                          <b>
-                            Termos em comum:
-                          </b>
-
-                          ${esc(
-                            (
-                              problem
-                                .sharedTerms ||
-                              []
-                            ).join(', ')
-                          )}
-
-                        </p>
-
-
-                        <p>
-
-                          <b>
-                            Recomendação:
-                          </b>
-
-                          ${esc(
-                            problem
-                              .recommendation ||
-                            ''
-                          )}
-
-                        </p>
-
-                      </div>
-
-                      `
-                    ).join('')
-
-                    :
-
-                    `
-
-                    <p>
-                      ✅ Nenhum possível conflito
-                      encontrado neste artigo.
-                    </p>
-
-                    `
-                  }
-
-
-                  <button
-                    class="secondary copy-problems"
-                    data-title="${esc(
-                      article.title || ''
-                    )}"
-                    data-problems="${esc(
-                      JSON.stringify(
-                        article.problems || []
-                      )
-                    )}"
-                  >
-                    Copiar problemas
-                  </button>
-
-                </div>
-
-                `
-              ).join('')}
-
-            `;
-
-
-            document
-              .querySelectorAll(
-                '.copy-problems'
-              )
-              .forEach(btn=>{
-
-                btn.onclick=async()=>{
-
-                  try{
-
-                    const problems=
-                      JSON.parse(
-                        btn.dataset.problems ||
-                        '[]'
-                      );
-
-
-                    const text=
-                      problems.length
-
-                      ?
-
-                      problems.map(
-                        (p,i)=>
-
-                        `${i+1}. Possível conflito (${p.risk})
-Score: ${p.score}
-Artigo relacionado: ${p.relatedArticle?.title || ''}
-Termos em comum: ${(p.sharedTerms || []).join(', ')}
-Recomendação: ${p.recommendation || ''}`
-
-                      ).join('\n\n')
-
-                      :
-
-                      'Nenhum problema encontrado.';
-
-
-                    await navigator
-                      .clipboard
-                      .writeText(
-
-                        `Problemas do artigo: ${btn.dataset.title}
-
-${text}`
-
-                      );
-
-
-                    btn.textContent=
-                      'Copiado!';
-
-
-                    setTimeout(
-                      ()=>{
-                        btn.textContent=
-                          'Copiar problemas';
-                      },
-                      1500
-                    );
-
-
-                  }catch(e){
-
-                    alert(
-                      'Não foi possível copiar os problemas.'
-                    );
-
-                  }
-
-                };
-
-              });
-
-
-            btn.disabled=false;
-
-            btn.textContent=
-              'Sincronizar e analisar';
-
-
-          }catch(e){
-
-            alert(e.message);
-
-            btn.disabled=false;
-
-            btn.textContent=
-              'Sincronizar e analisar';
-
-          }
-
-        };
-
-      });
-
+    });
 
   }catch(e){
 
@@ -609,128 +271,7 @@ ${text}`
 };
 
 
-document.querySelector('#proposals').onclick=
-async()=>{
-
-  try{
-
-    const d=
-      await api('/proposals');
-
-
-    document.querySelector(
-      '#proposalList'
-    ).innerHTML=
-
-      d.proposals.map(
-        p=>`
-
-        <div class="blog">
-
-          <b>
-            ${esc(p.title)}
-          </b>
-
-          <p>
-
-            Status:
-            ${esc(p.status)}
-            —
-            proposta ${p.id}
-
-          </p>
-
-
-          ${
-            p.status==='applied'
-
-            ?
-
-            `
-
-            <button
-              class="restore"
-              data-id="${p.id}"
-            >
-              Restaurar backup
-            </button>
-
-            `
-
-            :
-
-            ''
-          }
-
-        </div>
-
-        `
-      ).join('')
-
-      ||
-
-      '<p>Nenhuma proposta.</p>';
-
-
-    document
-      .querySelectorAll('.restore')
-      .forEach(b=>{
-
-        b.onclick=async()=>{
-
-          if(
-            !confirm(
-              'Restaurar o conteúdo anterior deste artigo no Blogger?'
-            )
-          ){
-
-            return;
-
-          }
-
-
-          try{
-
-            await api(
-              `/proposals/${b.dataset.id}/restore`,
-              {
-                method:'POST'
-              }
-            );
-
-
-            alert(
-              'Solicitação de restauração concluída.'
-            );
-
-
-            document
-              .querySelector('#proposals')
-              .click();
-
-
-          }catch(e){
-
-            alert(e.message);
-
-          }
-
-        };
-
-      });
-
-
-  }catch(e){
-
-    alert(e.message);
-
-  }
-
-};
-
-
-document.querySelector('#logout').onclick=
-async()=>{
+document.querySelector('#logout').onclick=async()=>{
 
   try{
 
