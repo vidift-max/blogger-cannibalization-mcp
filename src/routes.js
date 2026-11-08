@@ -221,6 +221,7 @@ const articles = r.rows.map(p => ({
   id: p.id,
   title: p.title,
   url: p.url,
+  content_html: p.content_html || '',
   problems: problemsByPost.get(String(p.id)) || []
 }));
 
