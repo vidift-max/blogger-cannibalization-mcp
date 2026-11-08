@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -130,10 +131,57 @@
       margin: 15px 0;
     }
 
+    .share-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .selection-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      overflow-wrap: anywhere;
+    }
+
+    .selection-option input {
+      width: 19px;
+      height: 19px;
+      flex-shrink: 0;
+      margin: 1px 0 0;
+    }
+
+    .selection-option strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .selection-list {
+      max-height: 480px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+
+    .selection-count {
+      padding: 14px;
+      background: #eff6ff;
+      color: #1e40af;
+      border-radius: 8px;
+      font-weight: bold;
+      margin: 15px 0;
+    }
+
     @media (max-width: 600px) {
       body { padding: 12px; }
       h1 { font-size: 21px; }
       .card { padding: 15px; }
+      .share-controls button { width: 100%; }
     }
   </style>
 </head>
@@ -187,6 +235,77 @@
   </section>
 
   <section class="card">
+    <h2>🤖 Compartilhar feed com ChatGPT</h2>
+
+    <p>
+      Carregue diretamente do Blogger todos os artigos e páginas.
+      Depois escolha quais conteúdos deseja compartilhar.
+    </p>
+
+    <div class="warning">
+      <strong>Importante:</strong> esta função apenas lê o conteúdo do Blogger.
+      Nenhum artigo ou página será alterado ou publicado.
+    </div>
+
+    <button id="loadShareFeed" class="green">
+      📥 Carregar artigos e páginas
+    </button>
+
+    <div id="shareLoadStatus" class="status hidden"></div>
+
+    <div id="shareSelection" class="hidden">
+
+      <div class="selection-count" id="selectionCount">
+        0 itens selecionados
+      </div>
+
+      <label class="selection-option">
+        <input type="checkbox" id="selectAll">
+        <span>
+          <strong>Selecionar tudo</strong>
+          Todos os artigos e todas as páginas
+        </span>
+      </label>
+
+      <label class="selection-option">
+        <input type="checkbox" id="selectArticles">
+        <span>
+          <strong>Selecionar todos os artigos</strong>
+          Marcar ou desmarcar somente os artigos
+        </span>
+      </label>
+
+      <label class="selection-option">
+        <input type="checkbox" id="selectPages">
+        <span>
+          <strong>Selecionar todas as páginas</strong>
+          Marcar ou desmarcar somente as páginas
+        </span>
+      </label>
+
+      <div class="selection-list" id="shareItemsList"></div>
+
+      <div class="share-controls">
+        <button id="shareSelected" class="green" disabled>
+          📤 Compartilhar selecionados com ChatGPT
+        </button>
+
+        <button id="downloadSelected" class="secondary" disabled>
+          💾 Baixar arquivo selecionado
+        </button>
+      </div>
+
+      <div id="shareStatus" class="status hidden"></div>
+
+      <p class="muted">
+        O sistema prepara um único arquivo JSON com o HTML completo
+        de cada item selecionado. No Android, escolha ChatGPT no menu
+        de compartilhamento, se ele estiver disponível.
+      </p>
+    </div>
+  </section>
+
+  <section class="card">
     <h2>📤 Importar ZIP corrigido</h2>
 
     <p>
@@ -212,17 +331,17 @@
     </p>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:15px">
-  <button id="importZip" class="orange">
-    📥 Enviar ZIP e preparar correções
-  </button>
+      <button id="importZip" class="orange">
+        📥 Enviar ZIP e preparar correções
+      </button>
 
-  <button
-    type="button"
-    class="green"
-    onclick="window.location.href='/proposals.html'">
-    📋 Revisar propostas
-  </button>
-</div>
+      <button
+        type="button"
+        class="green"
+        onclick="window.location.href='/proposals.html'">
+        📋 Revisar propostas
+      </button>
+    </div>
 
     <div id="importStatus" class="status hidden"></div>
     <div id="importResults"></div>
@@ -259,6 +378,7 @@
   }
 
   const analysis = data?.analysis || {};
+
   const articles = Array.isArray(analysis.articles)
     ? analysis.articles
     : [];
@@ -376,6 +496,386 @@
     } finally {
       button.disabled = false;
       button.textContent = '📦 Baixar todos os artigos';
+    }
+  });
+
+  /*
+   * COMPARTILHAMENTO DO FEED COMPLETO
+   */
+  let shareItems = [];
+  const selectedIds = new Set();
+
+  function getItemId(item) {
+    if (item.type === 'page') {
+      return 'page:' + String(
+        item.blogger_page_id || item.id || item.url
+      );
+    }
+
+    return 'article:' + String(
+      item.blogger_post_id || item.id || item.url
+    );
+  }
+
+  function isPage(item) {
+    return item.type === 'page';
+  }
+
+  function getItemHtml(item) {
+    return item.content_html ||
+      item.contentHtml ||
+      item.content ||
+      '';
+  }
+
+  function updateSelectionControls() {
+    const total = shareItems.length;
+    const selected = selectedIds.size;
+
+    const articleItems = shareItems.filter(item => !isPage(item));
+    const pageItems = shareItems.filter(item => isPage(item));
+
+    const selectedArticles = articleItems.filter(
+      item => selectedIds.has(getItemId(item))
+    ).length;
+
+    const selectedPages = pageItems.filter(
+      item => selectedIds.has(getItemId(item))
+    ).length;
+
+    $('selectionCount').textContent =
+      selected + ' de ' + total + ' itens selecionados';
+
+    $('selectAll').checked =
+      total > 0 && selected === total;
+
+    $('selectAll').indeterminate =
+      selected > 0 && selected < total;
+
+    $('selectArticles').checked =
+      articleItems.length > 0 &&
+      selectedArticles === articleItems.length;
+
+    $('selectArticles').indeterminate =
+      selectedArticles > 0 &&
+      selectedArticles < articleItems.length;
+
+    $('selectPages').checked =
+      pageItems.length > 0 &&
+      selectedPages === pageItems.length;
+
+    $('selectPages').indeterminate =
+      selectedPages > 0 &&
+      selectedPages < pageItems.length;
+
+    $('shareSelected').disabled = selected === 0;
+    $('downloadSelected').disabled = selected === 0;
+  }
+
+  function renderShareItems() {
+    const container = $('shareItemsList');
+    container.replaceChildren();
+
+    if (!shareItems.length) {
+      container.textContent =
+        'O Blogger não retornou artigos ou páginas.';
+      return;
+    }
+
+    shareItems.forEach(item => {
+      const id = getItemId(item);
+
+      const label = document.createElement('label');
+      label.className = 'selection-option';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = selectedIds.has(id);
+
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+          selectedIds.add(id);
+        } else {
+          selectedIds.delete(id);
+        }
+
+        updateSelectionControls();
+      });
+
+      const description = document.createElement('span');
+
+      const title = document.createElement('strong');
+      title.textContent =
+        (isPage(item) ? '📄 Página: ' : '📝 Artigo: ') +
+        (item.title || 'Sem título');
+
+      const detail = document.createElement('span');
+      detail.className = 'muted';
+      detail.textContent =
+        item.url || 'URL não informada';
+
+      description.appendChild(title);
+      description.appendChild(detail);
+
+      label.appendChild(checkbox);
+      label.appendChild(description);
+
+      container.appendChild(label);
+    });
+
+    updateSelectionControls();
+  }
+
+  function setGroupSelection(type, checked) {
+    shareItems.forEach(item => {
+      const matches =
+        type === 'all' ||
+        (type === 'articles' && !isPage(item)) ||
+        (type === 'pages' && isPage(item));
+
+      if (!matches) return;
+
+      const id = getItemId(item);
+
+      if (checked) {
+        selectedIds.add(id);
+      } else {
+        selectedIds.delete(id);
+      }
+    });
+
+    renderShareItems();
+  }
+
+  $('selectAll').addEventListener('change', event => {
+    setGroupSelection('all', event.target.checked);
+  });
+
+  $('selectArticles').addEventListener('change', event => {
+    setGroupSelection('articles', event.target.checked);
+  });
+
+  $('selectPages').addEventListener('change', event => {
+    setGroupSelection('pages', event.target.checked);
+  });
+
+  $('loadShareFeed').addEventListener('click', async () => {
+    const button = $('loadShareFeed');
+    const status = $('shareLoadStatus');
+
+    if (!blogId) {
+      showStatus(
+        status,
+        'Identificador do blog não encontrado. Volte e faça a análise novamente.',
+        'error'
+      );
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Carregando conteúdo do Blogger...';
+
+    showStatus(
+      status,
+      'Buscando todos os artigos e páginas diretamente do Blogger. Aguarde...'
+    );
+
+    $('shareSelection').classList.add('hidden');
+
+    try {
+      const response = await fetch(
+        '/api/blogs/' +
+          encodeURIComponent(blogId) +
+          '/share-feed',
+        {
+          method: 'GET',
+          credentials: 'same-origin',
+          cache: 'no-store'
+        }
+      );
+
+      let result = {};
+
+      try {
+        result = await response.json();
+      } catch {}
+
+      if (!response.ok) {
+        throw new Error(
+          result.message ||
+          result.error ||
+          'Não foi possível carregar o feed.'
+        );
+      }
+
+      if (!Array.isArray(result.items)) {
+        throw new Error(
+          'O servidor não retornou a lista de artigos e páginas esperada.'
+        );
+      }
+
+      shareItems = result.items;
+      selectedIds.clear();
+
+      $('shareSelection').classList.remove('hidden');
+
+      renderShareItems();
+
+      const totalArticles = Number(result.totalArticles || 0);
+      const totalPages = Number(result.totalPages || 0);
+
+      showStatus(
+        status,
+        'Feed carregado com sucesso!\n' +
+        'Artigos: ' + totalArticles +
+        '\nPáginas: ' + totalPages +
+        '\nTotal: ' + shareItems.length,
+        'success'
+      );
+
+      button.textContent = '🔄 Atualizar artigos e páginas';
+    } catch (error) {
+      showStatus(
+        status,
+        error.message || 'Erro ao carregar o feed.',
+        'error'
+      );
+
+      button.textContent = '📥 Carregar artigos e páginas';
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  function createSelectedFile() {
+    const selectedItems = shareItems.filter(item =>
+      selectedIds.has(getItemId(item))
+    );
+
+    if (!selectedItems.length) {
+      throw new Error('Selecione pelo menos um artigo ou página.');
+    }
+
+    const exportItems = selectedItems.map(item => ({
+      type: isPage(item) ? 'page' : 'article',
+      blogger_id: isPage(item)
+        ? item.blogger_page_id || null
+        : item.blogger_post_id || null,
+      title: item.title || '',
+      url: item.url || '',
+      updated_at: item.updated_at || null,
+      labels: Array.isArray(item.labels) ? item.labels : [],
+      content_html: getItemHtml(item)
+    }));
+
+    const payload = {
+      format: 'blogger-seo-intelligence-feed',
+      version: 1,
+      blog: {
+        name: $('blogInfo').textContent || '',
+        id: blogId
+      },
+      generatedAt: new Date().toISOString(),
+      totalItems: exportItems.length,
+      totalArticles: exportItems.filter(
+        item => item.type === 'article'
+      ).length,
+      totalPages: exportItems.filter(
+        item => item.type === 'page'
+      ).length,
+      items: exportItems
+    };
+
+    const json = JSON.stringify(payload, null, 2);
+
+    return new File(
+      [json],
+      'blogger-feed-selecionado.json',
+      { type: 'application/json' }
+    );
+  }
+
+  function downloadShareFile(file) {
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = file.name;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+
+  $('downloadSelected').addEventListener('click', () => {
+    try {
+      const file = createSelectedFile();
+
+      downloadShareFile(file);
+
+      showStatus(
+        $('shareStatus'),
+        'Arquivo criado e download iniciado. Você poderá compartilhá-lo pelo menu de arquivos do Android.',
+        'success'
+      );
+    } catch (error) {
+      showStatus(
+        $('shareStatus'),
+        error.message,
+        'error'
+      );
+    }
+  });
+
+  $('shareSelected').addEventListener('click', async () => {
+    const button = $('shareSelected');
+
+    try {
+      const file = createSelectedFile();
+
+      if (
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare({ files: [file] })
+      ) {
+        await navigator.share({
+          files: [file],
+          title: 'Feed do Blogger para análise',
+          text: 'Conteúdo selecionado do meu blog para análise no ChatGPT.'
+        });
+
+        showStatus(
+          $('shareStatus'),
+          'Menu de compartilhamento aberto. Selecione ChatGPT, caso esteja disponível.',
+          'success'
+        );
+      } else {
+        downloadShareFile(file);
+
+        showStatus(
+          $('shareStatus'),
+          'Seu navegador não permite compartilhar o arquivo diretamente. O arquivo foi baixado. Abra os downloads do Android e use Compartilhar para enviá-lo ao ChatGPT.',
+          'success'
+        );
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        showStatus(
+          $('shareStatus'),
+          'Compartilhamento cancelado.',
+          ''
+        );
+      } else {
+        showStatus(
+          $('shareStatus'),
+          error.message || 'Não foi possível compartilhar o arquivo.',
+          'error'
+        );
+      }
+    } finally {
+      button.disabled = selectedIds.size === 0;
     }
   });
 
