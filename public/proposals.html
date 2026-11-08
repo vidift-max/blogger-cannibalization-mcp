@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Revisar propostas — Blogger SEO Intelligence</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#f4f6fa;color:#202938;font-family:Arial,sans-serif}
+main{max-width:1100px;margin:auto}
+.card{background:white;border:1px solid #e1e5ec;border-radius:12px;padding:18px;margin:16px 0}
+h1{font-size:23px}
+h2{font-size:19px}
+button{border:0;border-radius:8px;padding:11px 15px;margin:5px 5px 5px 0;background:#2563eb;color:white;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5}
+.green{background:#15803d}
+.red{background:#b91c1c}
+.gray{background:#64748b}
+.article{border:1px solid #e2e8f0;border-radius:9px;padding:14px;margin:12px 0}
+.muted{color:#64748b;font-size:13px}
+.status{padding:12px;border-radius:8px;background:#eff6ff;color:#1e40af;white-space:pre-wrap;overflow-wrap:anywhere}
+.success{background:#f0fdf4;color:#166534}
+.error{background:#fef2f2;color:#991b1b}
+.badge{display:inline-block;padding:5px 9px;border-radius:20px;background:#e2e8f0;font-size:12px}
+.pending{background:#fef3c7;color:#92400e}
+.applied{background:#dcfce7;color:#166534}
+.rejected{background:#fee2e2;color:#991b1b}
+textarea{width:100%;min-height:260px;padding:12px;border:1px solid #cbd5e1;border-radius:8px;font-family:monospace;font-size:12px;resize:vertical}
+.comparison{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.hidden{display:none}
+a{color:#2563eb;overflow-wrap:anywhere}
+@media(max-width:700px){.comparison{grid-template-columns:1fr}body{padding:10px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>📋 Revisão de correções</h1>
+<button class="gray" onclick="location.href='/analysis.html'">← Voltar à análise</button>
+</header>
+
+<section class="card">
+<h2>Resumo das propostas</h2>
+<div id="summary">Carregando propostas...</div>
+<div id="message" class="status hidden"></div>
+<button id="refresh">Atualizar propostas</button>
+</section>
+
+<section class="card">
+<h2>Propostas recebidas</h2>
+<p class="muted">Abra cada proposta para comparar o conteúdo original com o corrigido.</p>
+<div id="proposals">Carregando...</div>
+</section>
+
+<section id="detail" class="card hidden">
+<h2 id="detailTitle">Comparar artigo</h2>
+<p id="detailInfo" class="muted"></p>
+
+<div class="comparison">
+<div>
+<h3>Artigo original</h3>
+<textarea id="original" readonly></textarea>
+</div>
+<div>
+<h3>Artigo corrigido</h3>
+<textarea id="corrected" readonly></textarea>
+</div>
+</div>
+
+<div id="detailStatus" class="status hidden"></div>
+
+<div id="actions">
+<button id="approve" class="green">✓ Aprovar e publicar no Blogger</button>
+<button id="reject" class="red">✕ Rejeitar proposta</button>
+</div>
+</section>
+</main>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+
+let currentProposal = null;
+let proposals = [];
+
+function csrfToken() {
+  const cookie = document.cookie.split('; ')
+    .find(item => item.startsWith('csrf='));
+
+  return cookie
+    ? decodeURIComponent(cookie.substring(5))
+    : '';
+}
+
+function showMessage(message, type = '') {
+  const el = $('message');
+  el.textContent = message;
+  el.className = 'status' + (type ? ' ' + type : '');
+  el.classList.remove('hidden');
+}
+
+function showDetailMessage(message, type = '') {
+  const el = $('detailStatus');
+  el.textContent = message;
+  el.className = 'status' + (type ? ' ' + type : '');
+  el.classList.remove('hidden');
+}
+
+function statusLabel(status) {
+  const labels = {
+    pending: 'Pendente',
+    applied: 'Publicado',
+    rejected: 'Rejeitado',
+    restored: 'Restaurado'
+  };
+  return labels[status] || status;
+}
+
+async function loadProposals() {
+  $('proposals').textContent = 'Carregando...';
+  $('detail').classList.add('hidden');
+
+  try {
+    const response = await fetch('/api/proposals', {
+      credentials: 'same-origin'
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || result.error || 'Erro ao carregar propostas.');
+    }
+
+    proposals = result.proposals || [];
+
+    const pending = proposals.filter(p => p.status === 'pending').length;
+    const applied = proposals.filter(p => p.status === 'applied').length;
+    const rejected = proposals.filter(p => p.status === 'rejected').length;
+
+    $('summary').textContent =
+      'Total: ' + proposals.length +
+      ' | Pendentes: ' + pending +
+      ' | Publicadas: ' + applied +
+      ' | Rejeitadas: ' + rejected;
+
+    renderProposals();
+  } catch (error) {
+    $('proposals').textContent = error.message;
+    showMessage(error.message, 'error');
+  }
+}
+
+function renderProposals() {
+  const container = $('proposals');
+  container.replaceChildren();
+
+  if (!proposals.length) {
+    container.textContent = 'Nenhuma proposta encontrada.';
+    return;
+  }
+
+  proposals.forEach(proposal => {
+    const card = document.createElement('div');
+    card.className = 'article';
+
+    const title = document.createElement('h3');
+    title.textContent = proposal.title || 'Artigo sem título';
+    card.appendChild(title);
+
+    const badge = document.createElement('span');
+    badge.className = 'badge ' + proposal.status;
+    badge.textContent = statusLabel(proposal.status);
+    card.appendChild(badge);
+
+    const info = document.createElement('p');
+    info.className = 'muted';
+    info.textContent = 'Proposta #' + proposal.id;
+    card.appendChild(info);
+
+    if (proposal.url) {
+      const link = document.createElement('a');
+      link.href = proposal.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = 'Abrir artigo no Blogger';
+      card.appendChild(link);
+    }
+
+    const button = document.createElement('button');
+    button.className = 'gray';
+    button.textContent = 'Ver original e corrigido';
+    button.addEventListener('click', () => openProposal(proposal.id));
+    card.appendChild(button);
+
+    container.appendChild(card);
+  });
+}
+
+async function openProposal(id) {
+  $('detail').classList.remove('hidden');
+  $('detailTitle').textContent = 'Carregando proposta #' + id;
+  $('detailStatus').classList.add('hidden');
+  $('actions').classList.add('hidden');
+
+  try {
+    const response = await fetch(
+      '/api/proposals/' + encodeURIComponent(id),
+      { credentials: 'same-origin' }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || result.error || 'Não foi possível abrir a proposta.');
+    }
+
+    currentProposal = result.proposal;
+
+    $('detailTitle').textContent =
+      currentProposal.title || 'Artigo sem título';
+
+    $('detailInfo').textContent =
+      'Proposta #' + currentProposal.id +
+      ' | Situação: ' + statusLabel(currentProposal.status) +
+      (currentProposal.url ? ' | ' + currentProposal.url : '');
+
+    $('original').value = currentProposal.previous_html || '';
+    $('corrected').value = currentProposal.proposed_html || '';
+
+    if (currentProposal.status === 'pending') {
+      $('actions').classList.remove('hidden');
+    }
+
+    $('detail').scrollIntoView({ behavior: 'smooth' });
+  } catch (error) {
+    showDetailMessage(error.message, 'error');
+  }
+}
+
+async function performAction(action) {
+  if (!currentProposal) return;
+
+  const isApprove = action === 'approve';
+
+  const confirmation = isApprove
+    ? 'ATENÇÃO: esta ação enviará o artigo corrigido para publicação no Blogger. Deseja continuar?'
+    : 'Deseja rejeitar esta proposta? O artigo original será mantido.';
+
+  if (!confirm(confirmation)) return;
+
+  const button = isApprove ? $('approve') : $('reject');
+  button.disabled = true;
+
+  try {
+    const token = csrfToken();
+
+    if (!token) {
+      throw new Error('Token de segurança não encontrado. Atualize a página.');
+    }
+
+    const response = await fetch(
+      '/api/proposals/' +
+      encodeURIComponent(currentProposal.id) +
+      (isApprove ? '/approve' : '/reject'),
+      {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'x-csrf-token': token
+        }
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result.message ||
+        result.error ||
+        'Não foi possível executar a ação.'
+      );
+    }
+
+    showDetailMessage(
+      isApprove
+        ? 'Proposta aprovada e enviada ao Blogger.'
+        : 'Proposta rejeitada. O artigo original foi mantido.',
+      'success'
+    );
+
+    $('actions').classList.add('hidden');
+
+    await loadProposals();
+  } catch (error) {
+    showDetailMessage(error.message, 'error');
+  } finally {
+    button.disabled = false;
+  }
+}
+
+$('approve').addEventListener('click', () => performAction('approve'));
+$('reject').addEventListener('click', () => performAction('reject'));
+$('refresh').addEventListener('click', loadProposals);
+
+loadProposals();
+})();
+</script>
+</body>
+  </html>
