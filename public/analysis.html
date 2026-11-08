@@ -211,9 +211,18 @@
       a pasta artigos com os arquivos HTML.
     </p>
 
-    <button id="importZip" class="orange">
-      📥 Enviar ZIP e preparar correções
-    </button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:15px">
+  <button id="importZip" class="orange">
+    📥 Enviar ZIP e preparar correções
+  </button>
+
+  <button
+    type="button"
+    class="green"
+    onclick="window.location.href='/proposals.html'">
+    📋 Revisar propostas
+  </button>
+</div>
 
     <div id="importStatus" class="status hidden"></div>
     <div id="importResults"></div>
