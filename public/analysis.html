@@ -830,16 +830,20 @@
   });
 
   $('shareSelected').addEventListener('click', async () => {
-    const button = $('shareSelected');
+  const button = $('shareSelected');
 
-    try {
-      const file = createSelectedFile();
+  try {
+    const file = createSelectedFile();
 
-      if (
-        navigator.share &&
-        navigator.canShare &&
-        navigator.canShare({ files: [file] })
-      ) {
+    /*
+     * Primeiro tenta abrir o compartilhamento nativo do Android.
+     */
+    if (
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare({ files: [file] })
+    ) {
+      try {
         await navigator.share({
           files: [file],
           title: 'Feed do Blogger para análise',
@@ -848,36 +852,63 @@
 
         showStatus(
           $('shareStatus'),
-          'Menu de compartilhamento aberto. Selecione ChatGPT, caso esteja disponível.',
+          'Compartilhamento aberto. Selecione ChatGPT no menu do Android.',
           'success'
         );
-      } else {
-        downloadShareFile(file);
 
-        showStatus(
-          $('shareStatus'),
-          'Seu navegador não permite compartilhar o arquivo diretamente. O arquivo foi baixado. Abra os downloads do Android e use Compartilhar para enviá-lo ao ChatGPT.',
-          'success'
-        );
+        return;
+
+      } catch (shareError) {
+
+        /*
+         * Se o usuário cancelar, não fazemos download.
+         */
+        if (
+          shareError &&
+          shareError.name === 'AbortError'
+        ) {
+          showStatus(
+            $('shareStatus'),
+            'Compartilhamento cancelado.',
+            ''
+          );
+
+          return;
+        }
+
+        /*
+         * Se aparecer Permission denied ou outro bloqueio,
+         * continua para o download automático.
+         */
       }
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        showStatus(
-          $('shareStatus'),
-          'Compartilhamento cancelado.',
-          ''
-        );
-      } else {
-        showStatus(
-          $('shareStatus'),
-          error.message || 'Não foi possível compartilhar o arquivo.',
-          'error'
-        );
-      }
-    } finally {
-      button.disabled = selectedIds.size === 0;
     }
-  });
+
+    /*
+     * FALLBACK:
+     * se o compartilhamento nativo não funcionar,
+     * baixa o mesmo arquivo automaticamente.
+     */
+    downloadShareFile(file);
+
+    showStatus(
+      $('shareStatus'),
+      'O Android bloqueou o compartilhamento direto. O arquivo foi baixado com sucesso. Abra os Downloads do Android, toque em Compartilhar e escolha ChatGPT.',
+      'success'
+    );
+
+  } catch (error) {
+
+    showStatus(
+      $('shareStatus'),
+      error.message ||
+      'Não foi possível preparar o arquivo para compartilhamento.',
+      'error'
+    );
+
+  } finally {
+    button.disabled = selectedIds.size === 0;
+  }
+});
 
   /*
    * IMPORTAR ZIP CORRIGIDO
