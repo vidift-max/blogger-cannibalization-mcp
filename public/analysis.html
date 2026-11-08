@@ -61,6 +61,17 @@ button:disabled{
   cursor:not-allowed
 }
 
+input[type="file"]{
+  display:block;
+  width:100%;
+  box-sizing:border-box;
+  padding:12px;
+  border:1px solid #d0d5dd;
+  border-radius:8px;
+  background:#fff;
+  margin-top:10px
+}
+
 .muted{
   color:#667085
 }
@@ -94,8 +105,21 @@ button:disabled{
   margin-top:14px
 }
 
+.preview{
+  width:100%;
+  min-height:500px;
+  border:1px solid #d0d5dd;
+  border-radius:8px;
+  background:white;
+  margin-top:12px
+}
+
 .warning{
   color:#b54708
+}
+
+.success{
+  color:#067647
 }
 
 a{
@@ -110,6 +134,7 @@ a{
 <body>
 
 <main class="wrap">
+
 
 <button
   class="secondary"
@@ -133,11 +158,61 @@ Carregando análise...
 <div id="result"></div>
 
 
+<!--
+====================================================
+ÁREA PARA ENVIAR O HTML CORRIGIDO
+====================================================
+-->
+
+<div class="card" id="uploadCard">
+
+  <h2>📤 Enviar arquivo corrigido</h2>
+
+  <p class="muted">
+
+    Depois de corrigir o artigo no ChatGPT,
+    envie aqui o arquivo HTML corrigido.
+
+  </p>
+
+  <p class="muted">
+
+    O arquivo será apenas carregado e exibido
+    para revisão. <b>Nada será publicado
+    automaticamente no Blogger.</b>
+
+  </p>
+
+
+  <input
+    type="file"
+    id="correctedFile"
+    accept=".html,.htm"
+  >
+
+
+  <div
+    id="uploadStatus"
+    class="muted"
+  ></div>
+
+
+  <div id="previewBox"></div>
+
+</div>
+
+
 </main>
 
 
 <script>
 
+
+/*
+====================================================
+ESCAPE DE HTML
+====================================================
+*/
 
 function esc(s){
 
@@ -156,29 +231,76 @@ function esc(s){
 
 
 /*
- * Cria e baixa um arquivo TXT com as informações
- * necessárias para a correção do artigo.
- */
+====================================================
+DOWNLOAD DO ARTIGO ORIGINAL EM HTML
+====================================================
+*/
+
 function downloadCorrectionFile(article){
+
+  /*
+   * O backend já envia content_html quando disponível.
+   *
+   * Caso não exista, usamos uma estrutura mínima
+   * para não perder o arquivo.
+   */
+
+  let originalHtml=
+    article.content_html ||
+    article.contentHtml ||
+    '';
+
+
+  if(!originalHtml.trim()){
+
+    originalHtml=`
+
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+
+<meta charset="utf-8">
+
+<title>${esc(article.title||'Artigo')}</title>
+
+</head>
+
+<body>
+
+<h1>${esc(article.title||'')}</h1>
+
+<p>
+URL original:
+${esc(article.url||'')}
+</p>
+
+<!--
+O conteúdo HTML completo não foi enviado pela API.
+Use este arquivo apenas como referência.
+-->
+
+</body>
+
+</html>
+
+`;
+
+  }
+
+
+  /*
+   * Coloca informações da análise no início
+   * do documento HTML.
+   */
 
   const problems=article.problems||[];
 
 
-  let content='';
+  let instructions=`<!--
 
-
-  content+=
-`BLOGGER SEO INTELLIGENCE
-ARQUIVO PARA CORREÇÃO DE ARTIGO
-
-IMPORTANTE:
-Este arquivo contém informações para análise e correção.
-Nenhuma alteração deve ser publicada automaticamente
-sem revisão e confirmação do usuário.
-
-========================================
-
-ARTIGO
+BLOGGER SEO INTELLIGENCE
+ARQUIVO PARA CORREÇÃO
 
 Título:
 ${article.title||''}
@@ -191,25 +313,23 @@ ${article.id||''}
 
 ========================================
 
-PROBLEMAS ENCONTRADOS
+POSSÍVEIS PROBLEMAS
 
 `;
 
 
   if(!problems.length){
 
-    content+=
-`Nenhum possível conflito encontrado neste artigo.
-`;
+    instructions+=
+      'Nenhum possível conflito encontrado.\n';
 
   }else{
 
     problems.forEach((problem,index)=>{
 
-      content+=
-`
+      instructions+=`
+
 Problema ${index+1}
--------------------
 
 Risco:
 ${problem.risk||''}
@@ -220,7 +340,7 @@ ${problem.score||''}
 Artigo relacionado:
 ${problem.relatedArticle?.title||''}
 
-URL do artigo relacionado:
+URL relacionado:
 ${problem.relatedArticle?.url||''}
 
 Termos em comum:
@@ -236,30 +356,60 @@ ${problem.recommendation||''}
   }
 
 
-  content+=
-`
-========================================
-
-INSTRUÇÕES PARA CORREÇÃO
-
-1. Analise o artigo original.
-2. Verifique se o possível conflito realmente existe.
-3. Preserve informações importantes e o sentido original.
-4. Melhore a diferenciação da intenção de busca quando necessário.
-5. Não invente informações.
-6. Não altere URLs sem necessidade.
-7. Gere uma versão corrigida do artigo.
-8. Retorne o arquivo corrigido para ser revisado
-   antes de qualquer publicação no Blogger.
+  instructions+=`
 
 ========================================
-`;
+
+INSTRUÇÕES
+
+Analise o artigo antes de fazer alterações.
+
+Preserve informações importantes.
+
+Não invente informações.
+
+Preserve links, imagens e estrutura HTML
+quando possível.
+
+Melhore a diferenciação do artigo somente
+quando houver motivo real.
+
+Este arquivo será revisado antes de qualquer
+publicação no Blogger.
+
+========================================
+
+-->`;
+
+
+  /*
+   * Se o HTML original já possui DOCTYPE,
+   * colocamos as instruções logo depois dele.
+   */
+
+  let finalHtml='';
+
+
+  if(/^\s*<!doctype/i.test(originalHtml)){
+
+    finalHtml=
+      originalHtml.replace(
+        /^\s*<!doctype[^>]*>/i,
+        match=>match+'\n'+instructions
+      );
+
+  }else{
+
+    finalHtml=
+      instructions+'\n'+originalHtml;
+
+  }
 
 
   const blob=new Blob(
-    [content],
+    [finalHtml],
     {
-      type:'text/plain;charset=utf-8'
+      type:'text/html;charset=utf-8'
     }
   );
 
@@ -268,6 +418,7 @@ INSTRUÇÕES PARA CORREÇÃO
 
 
   const a=document.createElement('a');
+
 
   const safeTitle=
     String(article.title||'artigo')
@@ -279,7 +430,7 @@ INSTRUÇÕES PARA CORREÇÃO
   a.href=url;
 
   a.download=
-    `correcao-blogger-${safeTitle||'artigo'}.txt`;
+    `correcao-blogger-${safeTitle||'artigo'}.html`;
 
 
   document.body.appendChild(a);
@@ -288,14 +439,18 @@ INSTRUÇÕES PARA CORREÇÃO
 
   a.remove();
 
+
   URL.revokeObjectURL(url);
 
 }
 
 
 /*
- * Recupera a análise feita na página anterior.
- */
+====================================================
+CARREGAR RESULTADO DA ANÁLISE
+====================================================
+*/
+
 const raw=sessionStorage.getItem(
   'bloggerSeoAnalysis'
 );
@@ -314,8 +469,10 @@ if(!raw){
       <h2>Nenhuma análise encontrada</h2>
 
       <p>
+
         Volte para a página de blogs e execute
         uma nova análise.
+
       </p>
 
     </div>
@@ -328,6 +485,7 @@ if(!raw){
 
     const data=JSON.parse(raw);
 
+
     const a=data.analysis;
 
     const s=data.sync;
@@ -335,18 +493,24 @@ if(!raw){
 
     document.querySelector('#summary').innerHTML=`
 
-      <b>${a.posts||0}</b> artigos analisados.
+      <b>${a.posts||0}</b>
+      artigos analisados.
 
       <br>
 
       <span class="muted">
-        ${s.synced||0} artigos sincronizados.
+
+        ${s.synced||0}
+        artigos sincronizados.
+
       </span>
 
       <br><br>
 
       <span class="muted">
+
         ${esc(a.note||'')}
+
       </span>
 
     `;
@@ -361,19 +525,31 @@ if(!raw){
 
         <div class="card">
 
+
           <h2>
-            ${esc(article.title||'Artigo sem título')}
+
+            ${esc(
+              article.title||
+              'Artigo sem título'
+            )}
+
           </h2>
 
 
           <p>
 
             <a
-              href="${esc(article.url||'#')}"
+              href="${esc(
+                article.url||'#'
+              )}"
               target="_blank"
               rel="noopener"
             >
-              ${esc(article.url||'')}
+
+              ${esc(
+                article.url||''
+              )}
+
             </a>
 
           </p>
@@ -382,11 +558,13 @@ if(!raw){
           ${
             article.problems &&
             article.problems.length
+
             ?
 
             article.problems.map(problem=>`
 
               <div class="problem">
+
 
                 <p>
 
@@ -394,7 +572,9 @@ if(!raw){
                     ⚠️ Possível conflito:
                   </b>
 
-                  ${esc(problem.risk||'')}
+                  ${esc(
+                    problem.risk||''
+                  )}
 
                 </p>
 
@@ -405,13 +585,16 @@ if(!raw){
                     Score:
                   </b>
 
-                  ${esc(problem.score)}
+                  ${esc(
+                    problem.score
+                  )}
 
                 </p>
 
 
                 ${
                   problem.relatedArticle
+
                   ?
 
                   `
@@ -423,7 +606,8 @@ if(!raw){
                     </b>
 
                     ${esc(
-                      problem.relatedArticle.title||''
+                      problem.relatedArticle
+                        .title||''
                     )}
 
                   </p>
@@ -433,14 +617,18 @@ if(!raw){
 
                     <a
                       href="${esc(
-                        problem.relatedArticle.url||'#'
+                        problem.relatedArticle
+                          .url||'#'
                       )}"
                       target="_blank"
                       rel="noopener"
                     >
+
                       ${esc(
-                        problem.relatedArticle.url||''
+                        problem.relatedArticle
+                          .url||''
                       )}
+
                     </a>
 
                   </p>
@@ -462,7 +650,7 @@ if(!raw){
 
                   ${esc(
                     (problem.sharedTerms||[])
-                    .join(', ')
+                      .join(', ')
                   )}
 
                 </p>
@@ -479,6 +667,7 @@ if(!raw){
                   )}
 
                 </p>
+
 
               </div>
 
@@ -500,25 +689,35 @@ if(!raw){
           }
 
 
+          <!--
+          ==========================================
+          BOTÃO DE DOWNLOAD
+          ==========================================
+          -->
+
+
           <div class="filebox">
 
-            <b>
-              📄 Arquivo para correção
-            </b>
+            <h3>
+              📄 Arquivo do artigo
+            </h3>
+
 
             <p class="muted">
 
-              Baixe este arquivo e envie-o aqui no
-              ChatGPT para preparar a correção do artigo.
+              Baixe o artigo em HTML para
+              corrigir no ChatGPT.
 
             </p>
 
 
             <button
-              class="download"
+              class="download download-file"
               data-index="${index}"
             >
-              Baixar arquivo para correção
+
+              Baixar HTML para correção
+
             </button>
 
 
@@ -536,7 +735,9 @@ if(!raw){
               )
             )}"
           >
+
             Copiar problemas
+
           </button>
 
 
@@ -546,21 +747,28 @@ if(!raw){
 
 
     /*
-     * Botões de download.
-     */
+    ==================================================
+    BOTÕES DE DOWNLOAD
+    ==================================================
+    */
+
     document
-      .querySelectorAll('.download')
+      .querySelectorAll('.download-file')
       .forEach(btn=>{
 
         btn.onclick=()=>{
 
           const article=
             articles[
-              Number(btn.dataset.index)
+              Number(
+                btn.dataset.index
+              )
             ];
 
 
-          downloadCorrectionFile(article);
+          downloadCorrectionFile(
+            article
+          );
 
         };
 
@@ -568,8 +776,11 @@ if(!raw){
 
 
     /*
-     * Botões "Copiar problemas".
-     */
+    ==================================================
+    COPIAR PROBLEMAS
+    ==================================================
+    */
+
     document
       .querySelectorAll('.copy-problems')
       .forEach(btn=>{
@@ -584,7 +795,8 @@ if(!raw){
               );
 
 
-            const text=problems.length
+            const text=
+              problems.length
 
               ?
 
@@ -614,12 +826,14 @@ ${text}`
             );
 
 
-            btn.textContent='Copiado!';
+            btn.textContent=
+              'Copiado!';
 
 
             setTimeout(()=>{
 
-              btn.textContent='Copiar problemas';
+              btn.textContent=
+                'Copiar problemas';
 
             },1500);
 
@@ -639,16 +853,22 @@ ${text}`
 
   }catch(e){
 
-    document.querySelector('#summary').textContent=
+    document.querySelector(
+      '#summary'
+    ).textContent=
       'Erro ao carregar a análise.';
 
 
-    document.querySelector('#result').innerHTML=`
+    document.querySelector(
+      '#result'
+    ).innerHTML=`
 
       <div class="card">
 
         <p>
+
           ${esc(e.message)}
+
         </p>
 
       </div>
@@ -661,9 +881,258 @@ ${text}`
 
 
 /*
- * Voltar para a lista de blogs.
- */
-document.querySelector('#back').onclick=()=>{
+====================================================
+UPLOAD DO HTML CORRIGIDO
+====================================================
+*/
+
+document.querySelector(
+  '#correctedFile'
+).onchange=async(event)=>{
+
+
+  const file=
+    event.target.files[0];
+
+
+  if(!file){
+
+    return;
+
+  }
+
+
+  const status=
+    document.querySelector(
+      '#uploadStatus'
+    );
+
+
+  const preview=
+    document.querySelector(
+      '#previewBox'
+    );
+
+
+  try{
+
+
+    /*
+     * Confere extensão.
+     */
+
+    const filename=
+      file.name.toLowerCase();
+
+
+    if(
+      !filename.endsWith('.html') &&
+      !filename.endsWith('.htm')
+    ){
+
+      throw new Error(
+        'Selecione um arquivo HTML (.html ou .htm).'
+      );
+
+    }
+
+
+    status.textContent=
+      'Lendo arquivo corrigido...';
+
+
+    const html=
+      await file.text();
+
+
+    if(!html.trim()){
+
+      throw new Error(
+        'O arquivo está vazio.'
+      );
+
+    }
+
+
+    /*
+     * Guarda o HTML temporariamente.
+     *
+     * Ainda NÃO envia para o Blogger.
+     */
+
+    sessionStorage.setItem(
+      'bloggerCorrectedHtml',
+      html
+    );
+
+
+    sessionStorage.setItem(
+      'bloggerCorrectedFilename',
+      file.name
+    );
+
+
+    status.innerHTML=`
+
+      <span class="success">
+
+        ✓ Arquivo carregado com sucesso.
+
+      </span>
+
+    `;
+
+
+    preview.innerHTML=`
+
+      <div class="filebox">
+
+        <h3>
+          📄 Arquivo recebido
+        </h3>
+
+
+        <p>
+
+          <b>Nome:</b>
+
+          ${esc(file.name)}
+
+        </p>
+
+
+        <p>
+
+          <b>Tamanho:</b>
+
+          ${Math.round(
+            file.size/1024
+          )}
+
+          KB
+
+        </p>
+
+
+      </div>
+
+
+      <div class="card">
+
+        <h3>
+          👁️ Prévia do HTML corrigido
+        </h3>
+
+
+        <iframe
+          id="previewFrame"
+          class="preview"
+          sandbox=""
+        ></iframe>
+
+
+      </div>
+
+
+      <div class="card">
+
+        <p>
+
+          ⚠️
+
+          <b>
+            Importante:
+          </b>
+
+          esta é somente uma prévia.
+
+          O Blogger ainda não foi alterado.
+
+        </p>
+
+
+        <button
+          id="preparePublish"
+        >
+
+          Continuar para revisão
+
+        </button>
+
+
+      </div>
+
+    `;
+
+
+    /*
+     * Mostra o HTML dentro do iframe.
+     */
+
+    const frame=
+      document.querySelector(
+        '#previewFrame'
+      );
+
+
+    frame.srcdoc=html;
+
+
+    /*
+     * Próxima etapa.
+     *
+     * Por enquanto não publica.
+     */
+
+    document
+      .querySelector(
+        '#preparePublish'
+      )
+      .onclick=()=>{
+
+        alert(
+
+          'Arquivo pronto para a próxima etapa. '+
+          'Ainda não foi publicado no Blogger.'
+
+        );
+
+      };
+
+
+  }catch(e){
+
+    status.textContent='';
+
+
+    preview.innerHTML=`
+
+      <div class="problem">
+
+        ❌
+
+        ${esc(
+          e.message
+        )}
+
+      </div>
+
+    `;
+
+  }
+
+};
+
+
+/*
+====================================================
+VOLTAR PARA A LISTA DE BLOGS
+====================================================
+*/
+
+document.querySelector(
+  '#back'
+).onclick=()=>{
 
   window.location.href='/';
 
