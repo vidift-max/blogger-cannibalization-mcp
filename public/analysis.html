@@ -155,12 +155,54 @@ Carregando análise...
 </p>
 
 
+<!--
+====================================================
+DOWNLOAD DE TODOS OS ARTIGOS
+====================================================
+-->
+
+<div class="card">
+
+  <h2>📦 Todos os artigos</h2>
+
+  <p class="muted">
+
+    Baixe todos os artigos deste blog de uma só vez
+    em um único arquivo ZIP.
+
+  </p>
+
+  <p class="muted">
+
+    Os artigos serão mantidos em HTML para que
+    possam ser corrigidos e revisados depois.
+
+  </p>
+
+  <button
+    id="downloadAll"
+    class="download"
+  >
+
+    📦 Baixar todos os artigos
+
+  </button>
+
+
+  <p
+    id="downloadAllStatus"
+    class="muted"
+  ></p>
+
+</div>
+
+
 <div id="result"></div>
 
 
 <!--
 ====================================================
-ÁREA PARA ENVIAR O HTML CORRIGIDO
+ENVIO DO ARQUIVO CORRIGIDO
 ====================================================
 -->
 
@@ -178,8 +220,12 @@ Carregando análise...
   <p class="muted">
 
     O arquivo será apenas carregado e exibido
-    para revisão. <b>Nada será publicado
-    automaticamente no Blogger.</b>
+    para revisão.
+
+    <b>
+      Nada será publicado automaticamente
+      no Blogger.
+    </b>
 
   </p>
 
@@ -232,18 +278,11 @@ function esc(s){
 
 /*
 ====================================================
-DOWNLOAD DO ARTIGO ORIGINAL EM HTML
+DOWNLOAD DE UM ARTIGO
 ====================================================
 */
 
 function downloadCorrectionFile(article){
-
-  /*
-   * O backend já envia content_html quando disponível.
-   *
-   * Caso não exista, usamos uma estrutura mínima
-   * para não perder o arquivo.
-   */
 
   let originalHtml=
     article.content_html ||
@@ -262,22 +301,28 @@ function downloadCorrectionFile(article){
 
 <meta charset="utf-8">
 
-<title>${esc(article.title||'Artigo')}</title>
+<title>${esc(
+  article.title||'Artigo'
+)}</title>
 
 </head>
 
 <body>
 
-<h1>${esc(article.title||'')}</h1>
+<h1>${esc(
+  article.title||''
+)}</h1>
 
 <p>
 URL original:
-${esc(article.url||'')}
+${esc(
+  article.url||''
+)}
 </p>
 
 <!--
-O conteúdo HTML completo não foi enviado pela API.
-Use este arquivo apenas como referência.
+O conteúdo HTML completo ainda não foi
+recebido pela API.
 -->
 
 </body>
@@ -289,12 +334,8 @@ Use este arquivo apenas como referência.
   }
 
 
-  /*
-   * Coloca informações da análise no início
-   * do documento HTML.
-   */
-
-  const problems=article.problems||[];
+  const problems=
+    article.problems||[];
 
 
   let instructions=`<!--
@@ -382,11 +423,6 @@ publicação no Blogger.
 -->`;
 
 
-  /*
-   * Se o HTML original já possui DOCTYPE,
-   * colocamos as instruções logo depois dele.
-   */
-
   let finalHtml='';
 
 
@@ -414,28 +450,43 @@ publicação no Blogger.
   );
 
 
-  const url=URL.createObjectURL(blob);
+  const url=
+    URL.createObjectURL(blob);
 
 
-  const a=document.createElement('a');
+  const a=
+    document.createElement('a');
 
 
   const safeTitle=
-    String(article.title||'artigo')
-      .replace(/[^\w\s-]/g,'')
-      .replace(/\s+/g,'-')
+    String(
+      article.title||'artigo'
+    )
+      .replace(
+        /[^\w\s-]/g,
+        ''
+      )
+      .replace(
+        /\s+/g,
+        '-'
+      )
       .toLowerCase();
 
 
   a.href=url;
 
+
   a.download=
-    `correcao-blogger-${safeTitle||'artigo'}.html`;
+    `correcao-blogger-${
+      safeTitle||'artigo'
+    }.html`;
 
 
   document.body.appendChild(a);
 
+
   a.click();
+
 
   a.remove();
 
@@ -451,22 +502,29 @@ CARREGAR RESULTADO DA ANÁLISE
 ====================================================
 */
 
-const raw=sessionStorage.getItem(
-  'bloggerSeoAnalysis'
-);
+const raw=
+  sessionStorage.getItem(
+    'bloggerSeoAnalysis'
+  );
 
 
 if(!raw){
 
-  document.querySelector('#summary').textContent=
+  document.querySelector(
+    '#summary'
+  ).textContent=
     'Nenhuma análise disponível.';
 
 
-  document.querySelector('#result').innerHTML=`
+  document.querySelector(
+    '#result'
+  ).innerHTML=`
 
     <div class="card">
 
-      <h2>Nenhuma análise encontrada</h2>
+      <h2>
+        Nenhuma análise encontrada
+      </h2>
 
       <p>
 
@@ -483,17 +541,26 @@ if(!raw){
 
   try{
 
-    const data=JSON.parse(raw);
+    const data=
+      JSON.parse(raw);
 
 
-    const a=data.analysis;
+    const a=
+      data.analysis;
 
-    const s=data.sync;
+
+    const s=
+      data.sync;
 
 
-    document.querySelector('#summary').innerHTML=`
+    document.querySelector(
+      '#summary'
+    ).innerHTML=`
 
-      <b>${a.posts||0}</b>
+      <b>
+        ${a.posts||0}
+      </b>
+
       artigos analisados.
 
       <br>
@@ -509,19 +576,25 @@ if(!raw){
 
       <span class="muted">
 
-        ${esc(a.note||'')}
+        ${esc(
+          a.note||''
+        )}
 
       </span>
 
     `;
 
 
-    const articles=a.articles||[];
+    const articles=
+      a.articles||[];
 
 
-    document.querySelector('#result').innerHTML=
+    document.querySelector(
+      '#result'
+    ).innerHTML=
 
-      articles.map((article,index)=>`
+      articles.map(
+        (article,index)=>`
 
         <div class="card">
 
@@ -561,7 +634,8 @@ if(!raw){
 
             ?
 
-            article.problems.map(problem=>`
+            article.problems.map(
+              problem=>`
 
               <div class="problem">
 
@@ -606,7 +680,8 @@ if(!raw){
                     </b>
 
                     ${esc(
-                      problem.relatedArticle
+                      problem
+                        .relatedArticle
                         .title||''
                     )}
 
@@ -617,7 +692,8 @@ if(!raw){
 
                     <a
                       href="${esc(
-                        problem.relatedArticle
+                        problem
+                          .relatedArticle
                           .url||'#'
                       )}"
                       target="_blank"
@@ -625,7 +701,8 @@ if(!raw){
                     >
 
                       ${esc(
-                        problem.relatedArticle
+                        problem
+                          .relatedArticle
                           .url||''
                       )}
 
@@ -649,8 +726,10 @@ if(!raw){
                   </b>
 
                   ${esc(
-                    (problem.sharedTerms||[])
-                      .join(', ')
+                    (
+                      problem
+                        .sharedTerms||[]
+                    ).join(', ')
                   )}
 
                 </p>
@@ -663,7 +742,8 @@ if(!raw){
                   </b>
 
                   ${esc(
-                    problem.recommendation||''
+                    problem
+                      .recommendation||''
                   )}
 
                 </p>
@@ -671,7 +751,8 @@ if(!raw){
 
               </div>
 
-            `).join('')
+            `
+            ).join('')
 
             :
 
@@ -689,13 +770,6 @@ if(!raw){
           }
 
 
-          <!--
-          ==========================================
-          BOTÃO DE DOWNLOAD
-          ==========================================
-          -->
-
-
           <div class="filebox">
 
             <h3>
@@ -705,8 +779,8 @@ if(!raw){
 
             <p class="muted">
 
-              Baixe o artigo em HTML para
-              corrigir no ChatGPT.
+              Baixe este artigo em HTML
+              para corrigir no ChatGPT.
 
             </p>
 
@@ -743,17 +817,20 @@ if(!raw){
 
         </div>
 
-      `).join('');
+      `
+      ).join('');
 
 
     /*
     ==================================================
-    BOTÕES DE DOWNLOAD
+    BOTÕES DE DOWNLOAD INDIVIDUAL
     ==================================================
     */
 
     document
-      .querySelectorAll('.download-file')
+      .querySelectorAll(
+        '.download-file'
+      )
       .forEach(btn=>{
 
         btn.onclick=()=>{
@@ -782,7 +859,9 @@ if(!raw){
     */
 
     document
-      .querySelectorAll('.copy-problems')
+      .querySelectorAll(
+        '.copy-problems'
+      )
       .forEach(btn=>{
 
         btn.onclick=async()=>{
@@ -800,7 +879,8 @@ if(!raw){
 
               ?
 
-              problems.map((p,i)=>
+              problems.map(
+                (p,i)=>
 
                 `${i+1}. Possível conflito (${p.risk})
 Score: ${p.score}
@@ -815,15 +895,17 @@ Recomendação: ${p.recommendation||''}`
               'Nenhum problema encontrado.';
 
 
-            await navigator.clipboard.writeText(
+            await navigator
+              .clipboard
+              .writeText(
 
-              `Problemas do artigo: ${
-                btn.dataset.title
-              }
+                `Problemas do artigo: ${
+                  btn.dataset.title
+                }
 
 ${text}`
 
-            );
+              );
 
 
             btn.textContent=
@@ -867,7 +949,9 @@ ${text}`
 
         <p>
 
-          ${esc(e.message)}
+          ${esc(
+            e.message
+          )}
 
         </p>
 
@@ -882,13 +966,104 @@ ${text}`
 
 /*
 ====================================================
+BOTÃO: BAIXAR TODOS OS ARTIGOS
+====================================================
+*/
+
+document.querySelector(
+  '#downloadAll'
+).onclick=()=>{
+
+  const raw=
+    sessionStorage.getItem(
+      'bloggerSeoAnalysis'
+    );
+
+
+  if(!raw){
+
+    alert(
+      'Nenhuma análise disponível.'
+    );
+
+    return;
+
+  }
+
+
+  try{
+
+    const data=
+      JSON.parse(raw);
+
+
+    const articles=
+      data.analysis?.articles||[];
+
+
+    if(!articles.length){
+
+      alert(
+        'Nenhum artigo encontrado nesta análise.'
+      );
+
+      return;
+
+    }
+
+
+    /*
+     * Nesta etapa apenas confirmamos que os
+     * artigos foram carregados.
+     *
+     * No próximo passo este botão será ligado
+     * ao backend para gerar o ZIP real.
+     */
+
+    document.querySelector(
+      '#downloadAllStatus'
+    ).innerHTML=`
+
+      <span class="success">
+
+        ✓ ${articles.length}
+        artigos encontrados.
+
+      </span>
+
+      <br>
+
+      <span class="muted">
+
+        O gerador do arquivo ZIP será conectado
+        na próxima etapa.
+
+      </span>
+
+    `;
+
+
+  }catch(e){
+
+    alert(
+      'Não foi possível preparar os artigos.'
+    );
+
+  }
+
+};
+
+
+/*
+====================================================
 UPLOAD DO HTML CORRIGIDO
 ====================================================
 */
 
 document.querySelector(
   '#correctedFile'
-).onchange=async(event)=>{
+).onchange=
+async(event)=>{
 
 
   const file=
@@ -916,10 +1091,6 @@ document.querySelector(
 
   try{
 
-
-    /*
-     * Confere extensão.
-     */
 
     const filename=
       file.name.toLowerCase();
@@ -955,7 +1126,7 @@ document.querySelector(
 
 
     /*
-     * Guarda o HTML temporariamente.
+     * Guarda temporariamente o HTML corrigido.
      *
      * Ainda NÃO envia para o Blogger.
      */
@@ -996,7 +1167,9 @@ document.querySelector(
 
           <b>Nome:</b>
 
-          ${esc(file.name)}
+          ${esc(
+            file.name
+          )}
 
         </p>
 
@@ -1065,24 +1238,15 @@ document.querySelector(
     `;
 
 
-    /*
-     * Mostra o HTML dentro do iframe.
-     */
-
     const frame=
       document.querySelector(
         '#previewFrame'
       );
 
 
-    frame.srcdoc=html;
+    frame.srcdoc=
+      html;
 
-
-    /*
-     * Próxima etapa.
-     *
-     * Por enquanto não publica.
-     */
 
     document
       .querySelector(
@@ -1091,10 +1255,8 @@ document.querySelector(
       .onclick=()=>{
 
         alert(
-
           'Arquivo pronto para a próxima etapa. '+
           'Ainda não foi publicado no Blogger.'
-
         );
 
       };
