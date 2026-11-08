@@ -1,6 +1,7 @@
 import express from 'express';
 import archiver from 'archiver';
 import { google } from 'googleapis';
+import { createZipImportRouter } from './zip-import.js';
 import { pool, query } from './db.js';
 import { encryptSecret, decryptSecret, randomToken, sha256, safeEqual, stripHtml } from './security.js';
 import { BLOGGER_SCOPE, oauthClient, listBlogs, listPosts, getPost, updatePost } from './blogger.js';
