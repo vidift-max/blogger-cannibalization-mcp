@@ -89,3 +89,78 @@ CREATE TABLE IF NOT EXISTS audit_events (
   details JSONB NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- ============================================================
+-- LOTES DE CORREÇÕES
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS correction_batches (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  blog_id BIGINT NOT NULL REFERENCES blogs(id) ON DELETE CASCADE,
+
+  name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+
+  total_items INTEGER NOT NULL DEFAULT 0,
+  pending_items INTEGER NOT NULL DEFAULT 0,
+  approved_items INTEGER NOT NULL DEFAULT 0,
+  published_items INTEGER NOT NULL DEFAULT 0,
+  rejected_items INTEGER NOT NULL DEFAULT 0,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+
+-- ============================================================
+-- ITENS DOS LOTES DE CORREÇÕES
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS correction_batch_items (
+  id BIGSERIAL PRIMARY KEY,
+
+  batch_id BIGINT NOT NULL
+    REFERENCES correction_batches(id)
+    ON DELETE CASCADE,
+
+  post_id BIGINT NOT NULL
+    REFERENCES posts(id)
+    ON DELETE CASCADE,
+
+  proposal_id BIGINT
+    REFERENCES post_backups(id)
+    ON DELETE SET NULL,
+
+  status TEXT NOT NULL DEFAULT 'pending',
+
+  original_html TEXT,
+  corrected_html TEXT,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE(batch_id, post_id)
+);
+
+
+-- ============================================================
+-- ÍNDICES
+-- ============================================================
+
+CREATE INDEX IF NOT EXISTS idx_correction_batches_user
+  ON correction_batches(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_correction_batches_blog
+  ON correction_batches(blog_id);
+
+CREATE INDEX IF NOT EXISTS idx_correction_batches_created
+  ON correction_batches(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_correction_batch_items_batch
+  ON correction_batch_items(batch_id);
+
+CREATE INDEX IF NOT EXISTS idx_correction_batch_items_post
+  ON correction_batch_items(post_id);
+
+CREATE INDEX IF NOT EXISTS idx_correction_batch_items_status
+  ON correction_batch_items(status);
