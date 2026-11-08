@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS app_users (
   id BIGSERIAL PRIMARY KEY,
   google_sub TEXT UNIQUE NOT NULL,
@@ -70,7 +69,7 @@ CREATE TABLE IF NOT EXISTS post_backups (
 );
 
 -- Adiciona a coluna também às propostas que já existem.
--- Não apaga nem recria as 53 propostas importadas.
+-- Não apaga nem recria as propostas existentes.
 ALTER TABLE post_backups
 ADD COLUMN IF NOT EXISTS change_count INTEGER NOT NULL DEFAULT 0;
 
@@ -89,16 +88,25 @@ CREATE TABLE IF NOT EXISTS audit_events (
   details JSONB NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+
 -- ============================================================
 -- LOTES DE CORREÇÕES
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS correction_batches (
   id BIGSERIAL PRIMARY KEY,
-  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  blog_id BIGINT NOT NULL REFERENCES blogs(id) ON DELETE CASCADE,
+
+  user_id BIGINT NOT NULL
+    REFERENCES app_users(id)
+    ON DELETE CASCADE,
+
+  blog_id BIGINT NOT NULL
+    REFERENCES blogs(id)
+    ON DELETE CASCADE,
 
   name TEXT NOT NULL,
+
   status TEXT NOT NULL DEFAULT 'pending',
 
   total_items INTEGER NOT NULL DEFAULT 0,
@@ -144,7 +152,7 @@ CREATE TABLE IF NOT EXISTS correction_batch_items (
 
 
 -- ============================================================
--- ÍNDICES
+-- ÍNDICES DOS LOTES
 -- ============================================================
 
 CREATE INDEX IF NOT EXISTS idx_correction_batches_user
@@ -155,6 +163,11 @@ CREATE INDEX IF NOT EXISTS idx_correction_batches_blog
 
 CREATE INDEX IF NOT EXISTS idx_correction_batches_created
   ON correction_batches(created_at DESC);
+
+
+-- ============================================================
+-- ÍNDICES DOS ITENS
+-- ============================================================
 
 CREATE INDEX IF NOT EXISTS idx_correction_batch_items_batch
   ON correction_batch_items(batch_id);
