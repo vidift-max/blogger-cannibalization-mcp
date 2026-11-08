@@ -196,9 +196,50 @@ router.post('/blogs/:blogId/analyze', currentUser, requireCsrf, async (req, res,
       if (!exists.rowCount) return res.status(404).json({ error: 'blog_not_found' });
     }
     const findings = analyzePosts(r.rows);
-    await query('INSERT INTO analysis_runs(user_id,blog_id,result) VALUES($1,$2,$3)', [req.user.id, req.params.blogId, JSON.stringify(findings)]);
-    await audit(req.user.id, 'analysis_run', { blogId: req.params.blogId, findings: findings.length });
-    res.json({ posts: r.rowCount, findings, note: 'Similaridade textual é um indício, não prova de canibalização. Valide intenção de busca e dados do Search Console.' });
+
+const problemsByPost = new Map(r.rows.map(p => [String(p.id), []]));
+
+for (const f of findings) {
+  for (const p of f.posts || []) {
+    const target = problemsByPost.get(String(p.id));
+
+    if (target) {
+      target.push({
+        type: 'possivel_conflito',
+        risk: f.risk,
+        score: f.score,
+        relatedArticle: (f.posts || [])
+          .filter(x => String(x.id) !== String(p.id))[0] || null,
+        sharedTerms: f.shared_terms || [],
+        recommendation: f.recommendation
+      });
+    }
+  }
+}
+
+const articles = r.rows.map(p => ({
+  id: p.id,
+  title: p.title,
+  url: p.url,
+  problems: problemsByPost.get(String(p.id)) || []
+}));
+
+await query(
+  'INSERT INTO analysis_runs(user_id,blog_id,result) VALUES($1,$2,$3)',
+  [req.user.id, req.params.blogId, JSON.stringify({ findings, articles })]
+);
+
+await audit(req.user.id, 'analysis_run', {
+  blogId: req.params.blogId,
+  findings: findings.length
+});
+
+res.json({
+  posts: r.rowCount,
+  findings,
+  articles,
+  note: 'Similaridade textual é um indício, não prova de canibalização. Valide intenção de busca e dados do Search Console.'
+});
   } catch (e) { next(e); }
 });
 
