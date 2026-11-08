@@ -2,7 +2,7 @@ services:
   - type: web
     name: blogger-cannibalization-ai
     runtime: docker
-    plan: starter
+    plan: free
     healthCheckPath: /healthz
     envVars:
       - key: NODE_ENV
@@ -25,4 +25,4 @@ services:
         sync: false
 databases:
   - name: blogger-cannibalization-ai-db
-    plan: basic-256mb
+    plan: free
