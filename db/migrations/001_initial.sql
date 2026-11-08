@@ -1,3 +1,4 @@
+
 CREATE TABLE IF NOT EXISTS app_users (
   id BIGSERIAL PRIMARY KEY,
   google_sub TEXT UNIQUE NOT NULL,
@@ -5,6 +6,7 @@ CREATE TABLE IF NOT EXISTS app_users (
   display_name TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
 CREATE TABLE IF NOT EXISTS oauth_tokens (
   user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
   encrypted_access_token TEXT,
@@ -13,6 +15,7 @@ CREATE TABLE IF NOT EXISTS oauth_tokens (
   scopes TEXT[] NOT NULL DEFAULT '{}',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
 CREATE TABLE IF NOT EXISTS user_sessions (
   id_hash TEXT PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
@@ -20,7 +23,10 @@ CREATE TABLE IF NOT EXISTS user_sessions (
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS user_sessions_expiry_idx ON user_sessions(expires_at);
+
+CREATE INDEX IF NOT EXISTS user_sessions_expiry_idx
+ON user_sessions(expires_at);
+
 CREATE TABLE IF NOT EXISTS blogs (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
@@ -30,6 +36,7 @@ CREATE TABLE IF NOT EXISTS blogs (
   synced_at TIMESTAMPTZ,
   UNIQUE(user_id, blogger_blog_id)
 );
+
 CREATE TABLE IF NOT EXISTS posts (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
@@ -43,18 +50,30 @@ CREATE TABLE IF NOT EXISTS posts (
   updated_at TIMESTAMPTZ,
   UNIQUE(user_id, blog_id, blogger_post_id)
 );
-CREATE INDEX IF NOT EXISTS posts_user_blog_idx ON posts(user_id, blog_id);
+
+CREATE INDEX IF NOT EXISTS posts_user_blog_idx
+ON posts(user_id, blog_id);
+
 CREATE TABLE IF NOT EXISTS post_backups (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
   post_id BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
   previous_html TEXT NOT NULL,
   proposed_html TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('pending','applied','restored','rejected')) DEFAULT 'pending',
+  change_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL CHECK (
+    status IN ('pending','applied','restored','rejected')
+  ) DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   applied_at TIMESTAMPTZ,
   restored_at TIMESTAMPTZ
 );
+
+-- Adiciona a coluna também às propostas que já existem.
+-- Não apaga nem recria as 53 propostas importadas.
+ALTER TABLE post_backups
+ADD COLUMN IF NOT EXISTS change_count INTEGER NOT NULL DEFAULT 0;
+
 CREATE TABLE IF NOT EXISTS analysis_runs (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
@@ -62,6 +81,7 @@ CREATE TABLE IF NOT EXISTS analysis_runs (
   result JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
 CREATE TABLE IF NOT EXISTS audit_events (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT REFERENCES app_users(id) ON DELETE SET NULL,
