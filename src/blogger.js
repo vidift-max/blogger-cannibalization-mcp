@@ -9,7 +9,7 @@ export function oauthClient() {
 }
 export async function listBlogs(auth) {
   const api = google.blogger({ version: 'v3', auth });
-  const r = await api.blogs.listByUser({});
+  const r = await api.blogs.listByUser({ userId: 'self' });
   return (r.data.items || []).map(b => ({
     blogger_blog_id: String(b.id), name: b.name || 'Blog sem nome', url: b.url || ''
   }));
