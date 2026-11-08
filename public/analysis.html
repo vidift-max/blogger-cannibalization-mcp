@@ -177,6 +177,47 @@
       margin: 15px 0;
     }
 
+    .batch-controls {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 15px;
+      border-radius: 9px;
+      margin: 15px 0;
+    }
+
+    .batch-controls select,
+    .batch-controls input {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      margin: 8px 0 12px;
+      background: white;
+    }
+
+    .article-select {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 12px;
+      padding: 10px;
+      background: #eff6ff;
+      border-radius: 8px;
+    }
+
+    .article-select input {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .batch-link {
+      display: inline-block;
+      margin-top: 12px;
+      color: #2563eb;
+    }
+
     @media (max-width: 600px) {
       body { padding: 12px; }
       h1 { font-size: 21px; }
@@ -351,8 +392,58 @@
     <h2>📄 Artigos analisados</h2>
 
     <p class="muted">
-      Veja os possíveis conflitos encontrados e baixe artigos individuais.
+      Selecione os artigos que deseja corrigir e organize-os em lotes.
     </p>
+
+    <div class="batch-controls">
+      <h3>📦 Organizar artigos em lotes</h3>
+
+      <p class="muted">
+        Marque os artigos abaixo e escolha em qual lote deseja organizá-los.
+      </p>
+
+      <div id="batchSelectionCount" class="selection-count">
+        0 artigos selecionados
+      </div>
+
+      <label for="batchSelect"><strong>Lote de destino</strong></label>
+
+      <select id="batchSelect">
+        <option value="">Carregando lotes...</option>
+      </select>
+
+      <button type="button" id="refreshBatches" class="secondary">
+        ↻ Atualizar lotes
+      </button>
+
+      <button type="button" id="addToBatch" class="green" disabled>
+        ➕ Adicionar selecionados ao lote
+      </button>
+
+      <hr>
+
+      <label for="newBatchName">
+        <strong>Criar novo lote</strong>
+      </label>
+
+      <input
+        type="text"
+        id="newBatchName"
+        placeholder="Ex.: Correções de novembro — lote 2"
+      >
+
+      <button type="button" id="createBatchFromAnalysis">
+        Criar lote
+      </button>
+
+      <p class="muted">
+        <a class="batch-link" id="openBatchHistory" href="/corrections.html">
+          📚 Abrir histórico de lotes
+        </a>
+      </p>
+
+      <div id="batchActionStatus" class="status hidden"></div>
+    </div>
 
     <div id="articles">Carregando análise...</div>
   </section>
@@ -405,6 +496,11 @@
   $('blogInfo').textContent =
     blogId ? 'Blog selecionado: ' + blogId : '';
 
+  if (blogId) {
+    $('openBatchHistory').href =
+      '/corrections.html?blogId=' + encodeURIComponent(blogId);
+  }
+
   function showStatus(element, message, type = '') {
     element.textContent = message;
     element.className = 'status' + (type ? ' ' + type : '');
@@ -422,8 +518,293 @@
   }
 
   /*
+   * SELEÇÃO E ORGANIZAÇÃO DOS ARTIGOS EM LOTES
+   */
+
+  const selectedPostIds = new Set();
+
+  function updateBatchSelection() {
+    const count = selectedPostIds.size;
+
+    $('batchSelectionCount').textContent =
+      count + ' artigos selecionados';
+
+    $('addToBatch').disabled =
+      count === 0 || !$('batchSelect').value;
+  }
+
+  async function loadCorrectionBatches() {
+    const select = $('batchSelect');
+
+    if (!blogId) {
+      select.innerHTML =
+        '<option value="">Blog não identificado</option>';
+
+      updateBatchSelection();
+      return;
+    }
+
+    select.innerHTML =
+      '<option value="">Carregando lotes...</option>';
+
+    try {
+      const response = await fetch(
+        '/api/correction-batches?blogId=' +
+        encodeURIComponent(blogId),
+        {
+          credentials: 'same-origin',
+          cache: 'no-store'
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.message ||
+          result.error ||
+          'Erro ao carregar lotes.'
+        );
+      }
+
+      const batches = Array.isArray(result)
+        ? result
+        : Array.isArray(result.batches)
+          ? result.batches
+          : Array.isArray(result.items)
+            ? result.items
+            : [];
+
+      select.innerHTML = '';
+
+      const firstOption = document.createElement('option');
+      firstOption.value = '';
+      firstOption.textContent = batches.length
+        ? 'Escolha um lote'
+        : 'Nenhum lote criado';
+
+      select.appendChild(firstOption);
+
+      batches.forEach(batch => {
+        const option = document.createElement('option');
+        option.value = batch.id;
+
+        option.textContent =
+          batch.name +
+          ' — ' +
+          Number(batch.total_items || 0) +
+          ' artigos';
+
+        select.appendChild(option);
+      });
+
+      updateBatchSelection();
+
+    } catch (error) {
+      select.innerHTML =
+        '<option value="">Erro ao carregar lotes</option>';
+
+      showStatus(
+        $('batchActionStatus'),
+        error.message,
+        'error'
+      );
+    }
+  }
+
+  async function createBatchFromAnalysis() {
+    const name = $('newBatchName').value.trim();
+
+    if (!blogId) {
+      showStatus(
+        $('batchActionStatus'),
+        'Blog não identificado. Faça a análise novamente.',
+        'error'
+      );
+      return;
+    }
+
+    if (!name) {
+      showStatus(
+        $('batchActionStatus'),
+        'Digite um nome para o novo lote.',
+        'error'
+      );
+      return;
+    }
+
+    const button = $('createBatchFromAnalysis');
+    button.disabled = true;
+
+    try {
+      const response = await fetch(
+        '/api/correction-batches',
+        {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': getCsrfToken()
+          },
+          body: JSON.stringify({
+            blogId: Number(blogId),
+            name
+          })
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.message ||
+          result.error ||
+          'Não foi possível criar o lote.'
+        );
+      }
+
+      $('newBatchName').value = '';
+
+      await loadCorrectionBatches();
+
+      const createdBatch = result.batch || result;
+
+      if (createdBatch.id) {
+        $('batchSelect').value = String(createdBatch.id);
+      }
+
+      updateBatchSelection();
+
+      showStatus(
+        $('batchActionStatus'),
+        'Lote criado com sucesso. Agora você pode adicionar os artigos selecionados.',
+        'success'
+      );
+
+    } catch (error) {
+      showStatus(
+        $('batchActionStatus'),
+        error.message,
+        'error'
+      );
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function addSelectedToBatch() {
+    const batchId = $('batchSelect').value;
+
+    if (!batchId) {
+      showStatus(
+        $('batchActionStatus'),
+        'Escolha primeiro um lote.',
+        'error'
+      );
+      return;
+    }
+
+    if (!selectedPostIds.size) {
+      showStatus(
+        $('batchActionStatus'),
+        'Selecione pelo menos um artigo.',
+        'error'
+      );
+      return;
+    }
+
+    const button = $('addToBatch');
+    const postIds = Array.from(selectedPostIds)
+      .map(Number);
+
+    button.disabled = true;
+    button.textContent = 'Adicionando artigos...';
+
+    try {
+      const response = await fetch(
+        '/api/correction-batches/' +
+        encodeURIComponent(batchId) +
+        '/items',
+        {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': getCsrfToken()
+          },
+          body: JSON.stringify({ postIds })
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.message ||
+          result.error ||
+          'Não foi possível adicionar os artigos.'
+        );
+      }
+
+      const added = Number(result.added ?? postIds.length);
+
+      selectedPostIds.clear();
+
+      document.querySelectorAll('.post-batch-checkbox')
+        .forEach(checkbox => {
+          checkbox.checked = false;
+        });
+
+      updateBatchSelection();
+
+      await loadCorrectionBatches();
+
+      showStatus(
+        $('batchActionStatus'),
+        'Solicitação concluída. ' +
+        added +
+        ' artigo(s) adicionado(s) ao lote. Nenhum artigo foi alterado ou publicado no Blogger.',
+        'success'
+      );
+
+    } catch (error) {
+      showStatus(
+        $('batchActionStatus'),
+        error.message,
+        'error'
+      );
+    } finally {
+      button.textContent =
+        '➕ Adicionar selecionados ao lote';
+
+      updateBatchSelection();
+    }
+  }
+
+  $('refreshBatches').addEventListener(
+    'click',
+    loadCorrectionBatches
+  );
+
+  $('batchSelect').addEventListener(
+    'change',
+    updateBatchSelection
+  );
+
+  $('createBatchFromAnalysis').addEventListener(
+    'click',
+    createBatchFromAnalysis
+  );
+
+  $('addToBatch').addEventListener(
+    'click',
+    addSelectedToBatch
+  );
+
+  /*
    * DOWNLOAD DE TODOS OS ARTIGOS
    */
+
   $('downloadAll').addEventListener('click', async () => {
     const button = $('downloadAll');
     const status = $('downloadStatus');
@@ -487,6 +868,7 @@
         'Download iniciado! Confira os arquivos baixados no dispositivo.',
         'success'
       );
+
     } catch (error) {
       showStatus(
         status,
@@ -502,6 +884,7 @@
   /*
    * COMPARTILHAMENTO DO FEED COMPLETO
    */
+
   let shareItems = [];
   const selectedIds = new Set();
 
@@ -734,6 +1117,7 @@
       );
 
       button.textContent = '🔄 Atualizar artigos e páginas';
+
     } catch (error) {
       showStatus(
         status,
@@ -742,6 +1126,7 @@
       );
 
       button.textContent = '📥 Carregar artigos e páginas';
+
     } finally {
       button.disabled = false;
     }
@@ -820,6 +1205,7 @@
         'Arquivo criado e download iniciado. Você poderá compartilhá-lo pelo menu de arquivos do Android.',
         'success'
       );
+
     } catch (error) {
       showStatus(
         $('shareStatus'),
@@ -830,89 +1216,72 @@
   });
 
   $('shareSelected').addEventListener('click', async () => {
-  const button = $('shareSelected');
+    const button = $('shareSelected');
 
-  try {
-    const file = createSelectedFile();
+    try {
+      const file = createSelectedFile();
 
-    /*
-     * Primeiro tenta abrir o compartilhamento nativo do Android.
-     */
-    if (
-      navigator.share &&
-      navigator.canShare &&
-      navigator.canShare({ files: [file] })
-    ) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: 'Feed do Blogger para análise',
-          text: 'Conteúdo selecionado do meu blog para análise no ChatGPT.'
-        });
+      if (
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare({ files: [file] })
+      ) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: 'Feed do Blogger para análise',
+            text: 'Conteúdo selecionado do meu blog para análise no ChatGPT.'
+          });
 
-        showStatus(
-          $('shareStatus'),
-          'Compartilhamento aberto. Selecione ChatGPT no menu do Android.',
-          'success'
-        );
-
-        return;
-
-      } catch (shareError) {
-
-        /*
-         * Se o usuário cancelar, não fazemos download.
-         */
-        if (
-          shareError &&
-          shareError.name === 'AbortError'
-        ) {
           showStatus(
             $('shareStatus'),
-            'Compartilhamento cancelado.',
-            ''
+            'Compartilhamento aberto. Selecione ChatGPT no menu do Android.',
+            'success'
           );
 
           return;
+
+        } catch (shareError) {
+          if (
+            shareError &&
+            shareError.name === 'AbortError'
+          ) {
+            showStatus(
+              $('shareStatus'),
+              'Compartilhamento cancelado.',
+              ''
+            );
+
+            return;
+          }
         }
-
-        /*
-         * Se aparecer Permission denied ou outro bloqueio,
-         * continua para o download automático.
-         */
       }
+
+      downloadShareFile(file);
+
+      showStatus(
+        $('shareStatus'),
+        'O Android bloqueou o compartilhamento direto. O arquivo foi baixado com sucesso. Abra os Downloads do Android, toque em Compartilhar e escolha ChatGPT.',
+        'success'
+      );
+
+    } catch (error) {
+      showStatus(
+        $('shareStatus'),
+        error.message ||
+        'Não foi possível preparar o arquivo para compartilhamento.',
+        'error'
+      );
+
+    } finally {
+      button.disabled = selectedIds.size === 0;
     }
-
-    /*
-     * FALLBACK:
-     * se o compartilhamento nativo não funcionar,
-     * baixa o mesmo arquivo automaticamente.
-     */
-    downloadShareFile(file);
-
-    showStatus(
-      $('shareStatus'),
-      'O Android bloqueou o compartilhamento direto. O arquivo foi baixado com sucesso. Abra os Downloads do Android, toque em Compartilhar e escolha ChatGPT.',
-      'success'
-    );
-
-  } catch (error) {
-
-    showStatus(
-      $('shareStatus'),
-      error.message ||
-      'Não foi possível preparar o arquivo para compartilhamento.',
-      'error'
-    );
-
-  } finally {
-    button.disabled = selectedIds.size === 0;
-  }
-});
+  });
 
   /*
    * IMPORTAR ZIP CORRIGIDO
    */
+
   $('importZip').addEventListener('click', async () => {
     const button = $('importZip');
     const input = $('correctedZip');
@@ -1059,12 +1428,14 @@
       results.appendChild(note);
 
       input.value = '';
+
     } catch (error) {
       showStatus(
         status,
         error.message || 'Erro ao importar o ZIP.',
         'error'
       );
+
     } finally {
       button.disabled = false;
       button.textContent = '📥 Enviar ZIP e preparar correções';
@@ -1074,6 +1445,7 @@
   /*
    * DOWNLOAD DE ARTIGO INDIVIDUAL
    */
+
   function safeSlug(value) {
     return String(value || 'artigo')
       .normalize('NFD')
@@ -1118,6 +1490,7 @@
   /*
    * COPIAR PROBLEMAS DO ARTIGO
    */
+
   function copyProblems(article) {
     const problems = article.problems || [];
 
@@ -1152,6 +1525,7 @@
   /*
    * MOSTRAR ARTIGOS E CONFLITOS
    */
+
   function renderArticles() {
     const container = $('articles');
 
@@ -1171,6 +1545,48 @@
       title.textContent = article.title || 'Artigo sem título';
       card.appendChild(title);
 
+      const postId = article.id ?? article.post_id;
+
+      const selectionLabel = document.createElement('label');
+      selectionLabel.className = 'article-select';
+
+      const selectionCheckbox = document.createElement('input');
+      selectionCheckbox.type = 'checkbox';
+      selectionCheckbox.className = 'post-batch-checkbox';
+
+      if (postId !== undefined && postId !== null) {
+        selectionCheckbox.value = String(postId);
+        selectionCheckbox.checked =
+          selectedPostIds.has(String(postId));
+
+        selectionCheckbox.addEventListener('change', () => {
+          const id = String(postId);
+
+          if (selectionCheckbox.checked) {
+            selectedPostIds.add(id);
+          } else {
+            selectedPostIds.delete(id);
+          }
+
+          updateBatchSelection();
+        });
+
+      } else {
+        selectionCheckbox.disabled = true;
+      }
+
+      const selectionText = document.createElement('span');
+
+      selectionText.textContent =
+        postId !== undefined && postId !== null
+          ? 'Selecionar para lote de correção'
+          : 'ID interno não disponível para seleção';
+
+      selectionLabel.appendChild(selectionCheckbox);
+      selectionLabel.appendChild(selectionText);
+
+      card.appendChild(selectionLabel);
+
       if (article.url) {
         const link = document.createElement('a');
         link.href = article.url;
@@ -1186,6 +1602,7 @@
       summary.textContent = problems.length
         ? problems.length + ' possível(is) conflito(s) encontrado(s).'
         : 'Nenhum possível conflito identificado.';
+
       card.appendChild(summary);
 
       problems.forEach(problem => {
@@ -1215,9 +1632,11 @@
       const downloadButton = document.createElement('button');
       downloadButton.textContent = '⬇️ Baixar HTML deste artigo';
       downloadButton.style.marginTop = '12px';
+
       downloadButton.addEventListener('click', () => {
         downloadArticle(article);
       });
+
       card.appendChild(downloadButton);
 
       const copyButton = document.createElement('button');
@@ -1225,16 +1644,24 @@
       copyButton.className = 'secondary';
       copyButton.style.marginTop = '12px';
       copyButton.style.marginLeft = '8px';
+
       copyButton.addEventListener('click', () => {
         copyProblems(article);
       });
+
       card.appendChild(copyButton);
 
       container.appendChild(card);
     });
+
+    updateBatchSelection();
   }
 
   renderArticles();
+
+  if (blogId) {
+    loadCorrectionBatches();
+  }
 
 })();
 </script>
