@@ -850,6 +850,79 @@ router.post('/posts/:postId/proposals', currentUser, requireCsrf, async (req, re
 /*
  * LISTA DE PROPOSTAS COM CONTAGEM DE ALTERAÇÕES
  */
+/*
+ * RECÁLCULO DAS CONTAGENS DE PROPOSTAS ANTIGAS
+ * POST /api/proposals/recalculate-counts
+ * Não publica nem altera artigos no Blogger.
+ */
+router.post(
+  '/proposals/recalculate-counts',
+  currentUser,
+  requireCsrf,
+  async (req, res, next) => {
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const proposalsResult = await client.query(
+        `SELECT
+          id,
+          previous_html,
+          proposed_html
+         FROM post_backups
+         WHERE user_id=$1
+         ORDER BY id ASC
+         LIMIT 500
+         FOR UPDATE`,
+        [req.user.id]
+      );
+
+      let updated = 0;
+
+      for (const proposal of proposalsResult.rows) {
+        const changeCount = countChangedSections(
+          proposal.previous_html || '',
+          proposal.proposed_html || ''
+        );
+
+        await client.query(
+          `UPDATE post_backups
+           SET change_count=$1
+           WHERE id=$2 AND user_id=$3`,
+          [
+            changeCount,
+            proposal.id,
+            req.user.id
+          ]
+        );
+
+        updated++;
+      }
+
+      await client.query('COMMIT');
+
+      await audit(req.user.id, 'proposal_counts_recalculated', {
+        updated
+      });
+
+      res.json({
+        ok: true,
+        updated,
+        message: `${updated} propostas tiveram suas contagens recalculadas. Nenhum artigo foi publicado.`
+      });
+    } catch (e) {
+      try {
+        await client.query('ROLLBACK');
+      } catch {}
+
+      next(e);
+    } finally {
+      client.release();
+    }
+  }
+);
+
 router.get('/proposals', currentUser, async (req, res, next) => {
   try {
     const r = await query(
