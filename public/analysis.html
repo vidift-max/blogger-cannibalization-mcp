@@ -6,9 +6,7 @@
   <title>Análise SEO — Blogger SEO Intelligence</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -32,15 +30,8 @@
       margin-bottom: 24px;
     }
 
-    h1 {
-      font-size: 25px;
-      margin: 0;
-    }
-
-    h2 {
-      font-size: 19px;
-      margin-top: 0;
-    }
+    h1 { font-size: 25px; margin: 0; }
+    h2 { font-size: 19px; margin-top: 0; }
 
     .card {
       background: white;
@@ -62,26 +53,12 @@
       color: white;
     }
 
-    button:hover {
-      opacity: .9;
-    }
+    button:hover { opacity: .9; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
 
-    button:disabled {
-      opacity: .5;
-      cursor: not-allowed;
-    }
-
-    .secondary {
-      background: #64748b;
-    }
-
-    .green {
-      background: #15803d;
-    }
-
-    .orange {
-      background: #c2410c;
-    }
+    .secondary { background: #64748b; }
+    .green { background: #15803d; }
+    .orange { background: #c2410c; }
 
     .stats {
       display: grid;
@@ -108,15 +85,8 @@
       margin-top: 13px;
     }
 
-    .article h3 {
-      margin-top: 0;
-      font-size: 17px;
-    }
-
-    .article a {
-      color: #2563eb;
-      word-break: break-all;
-    }
+    .article h3 { margin-top: 0; font-size: 17px; }
+    .article a { color: #2563eb; word-break: break-all; }
 
     .problem {
       background: #fff7ed;
@@ -126,10 +96,7 @@
       border-radius: 5px;
     }
 
-    .muted {
-      color: #64748b;
-      font-size: 13px;
-    }
+    .muted { color: #64748b; font-size: 13px; }
 
     .status {
       padding: 13px;
@@ -138,48 +105,35 @@
       background: #eff6ff;
       color: #1e40af;
       overflow-wrap: anywhere;
+      white-space: pre-wrap;
     }
 
-    .error {
-      background: #fef2f2;
-      color: #991b1b;
-    }
-
-    .success {
-      background: #f0fdf4;
-      color: #166534;
-    }
+    .error { background: #fef2f2; color: #991b1b; }
+    .success { background: #f0fdf4; color: #166534; }
+    .hidden { display: none; }
 
     input[type="file"] {
       display: block;
       width: 100%;
       margin: 15px 0;
-    }
-
-    iframe {
-      width: 100%;
-      min-height: 300px;
+      padding: 10px;
       border: 1px solid #ddd;
       border-radius: 8px;
-      background: white;
+      background: #fafafa;
     }
 
-    .hidden {
-      display: none;
+    .warning {
+      background: #fff7ed;
+      border-left: 4px solid #ea580c;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 15px 0;
     }
 
     @media (max-width: 600px) {
-      body {
-        padding: 12px;
-      }
-
-      h1 {
-        font-size: 21px;
-      }
-
-      .card {
-        padding: 15px;
-      }
+      body { padding: 12px; }
+      h1 { font-size: 21px; }
+      .card { padding: 15px; }
     }
   </style>
 </head>
@@ -218,12 +172,11 @@
   </section>
 
   <section class="card">
-    <h2>📦 Todos os artigos</h2>
+    <h2>📦 Baixar todos os artigos</h2>
 
     <p>
-      Baixe todos os artigos sincronizados do blog em um único arquivo ZIP.
-      O pacote contém os arquivos HTML originais e um manifesto com os
-      identificadores e endereços dos artigos.
+      Baixe todos os artigos sincronizados deste blog em um único arquivo ZIP.
+      O pacote inclui os arquivos HTML e o manifesto de identificação.
     </p>
 
     <button id="downloadAll" class="green">
@@ -234,53 +187,52 @@
   </section>
 
   <section class="card">
+    <h2>📤 Importar ZIP corrigido</h2>
+
+    <p>
+      Selecione o arquivo ZIP que contém os artigos corrigidos e o
+      <strong>manifest.json</strong> original.
+    </p>
+
+    <div class="warning">
+      <strong>Importante:</strong> a importação cria propostas de correção
+      e guarda os conteúdos originais como backup. Nenhum artigo será
+      publicado automaticamente no Blogger.
+    </div>
+
+    <input
+      type="file"
+      id="correctedZip"
+      accept=".zip,application/zip"
+    >
+
+    <p class="muted">
+      Limite de envio: 50 MB. O ZIP precisa manter o manifesto original e
+      a pasta artigos com os arquivos HTML.
+    </p>
+
+    <button id="importZip" class="orange">
+      📥 Enviar ZIP e preparar correções
+    </button>
+
+    <div id="importStatus" class="status hidden"></div>
+    <div id="importResults"></div>
+  </section>
+
+  <section class="card">
     <h2>📄 Artigos analisados</h2>
+
     <p class="muted">
       Veja os possíveis conflitos encontrados e baixe artigos individuais.
     </p>
 
-    <div id="articles">
-      Carregando análise...
-    </div>
-  </section>
-
-  <section class="card">
-    <h2>📤 Enviar artigo corrigido</h2>
-
-    <p>
-      Selecione um arquivo HTML corrigido para visualizar antes de continuar.
-    </p>
-
-    <input
-      type="file"
-      id="correctedFile"
-      accept=".html,.htm"
-    >
-
-    <div id="uploadStatus" class="status hidden"></div>
-
-    <div id="previewArea" class="hidden">
-      <h3>Pré-visualização</h3>
-      <iframe
-        id="preview"
-        sandbox=""
-        title="Pré-visualização do artigo corrigido"
-      ></iframe>
-
-      <p class="muted">
-        Esta é apenas uma pré-visualização. Nenhuma alteração foi enviada
-        ao Blogger.
-      </p>
-
-      <button id="continueReview" class="orange">
-        Continuar para revisão
-      </button>
-    </div>
+    <div id="articles">Carregando análise...</div>
   </section>
 
   <p class="muted">
-    Importante: os downloads não alteram seus artigos no Blogger.
-    Qualquer publicação de conteúdo corrigido deverá exigir sua confirmação.
+    A ferramenta não altera seus artigos durante o download ou a importação.
+    A publicação de qualquer correção deverá ser feita somente após sua
+    revisão e confirmação.
   </p>
 
 </div>
@@ -330,55 +282,52 @@
     element.classList.remove('hidden');
   }
 
+  function getCsrfToken() {
+    const item = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('csrf='));
+
+    return item
+      ? decodeURIComponent(item.substring('csrf='.length))
+      : '';
+  }
+
   /*
-   * DOWNLOAD DE TODOS OS ARTIGOS EM ZIP
+   * DOWNLOAD DE TODOS OS ARTIGOS
    */
-  $('downloadAll').addEventListener('click', () => {
+  $('downloadAll').addEventListener('click', async () => {
     const button = $('downloadAll');
     const status = $('downloadStatus');
 
     if (!blogId) {
       showStatus(
         status,
-        'Não encontramos o identificador do blog. Volte à página inicial e faça a análise novamente.',
+        'Identificador do blog não encontrado. Volte à página inicial e faça a análise novamente.',
         'error'
       );
       return;
     }
 
     button.disabled = true;
-    button.textContent = 'Preparando arquivo ZIP...';
+    button.textContent = 'Preparando ZIP...';
 
-    showStatus(
-      status,
-      'Solicitando ao servidor todos os artigos sincronizados...'
-    );
+    showStatus(status, 'Solicitando os artigos ao servidor...');
 
-    const url =
-      '/api/blogs/' +
-      encodeURIComponent(blogId) +
-      '/download-all';
+    try {
+      const response = await fetch(
+        '/api/blogs/' + encodeURIComponent(blogId) + '/download-all',
+        {
+          method: 'GET',
+          credentials: 'same-origin'
+        }
+      );
 
-    fetch(url, {
-      method: 'GET',
-      credentials: 'same-origin'
-    })
-    .then(async response => {
       if (!response.ok) {
         let message = 'Não foi possível gerar o ZIP.';
 
         try {
           const result = await response.json();
-
-          if (result.message) {
-            message = result.message;
-          } else if (result.error === 'not_authenticated') {
-            message = 'Sua sessão expirou. Entre novamente na ferramenta.';
-          } else if (result.error === 'blog_not_found') {
-            message = 'Blog não encontrado na sua conta.';
-          } else if (result.error === 'no_posts') {
-            message = 'Nenhum artigo sincronizado. Sincronize o blog primeiro.';
-          }
+          message = result.message || result.error || message;
         } catch {}
 
         throw new Error(message);
@@ -388,48 +337,213 @@
         response.headers.get('content-type') || '';
 
       if (!contentType.includes('application/zip')) {
-        throw new Error(
-          'O servidor não retornou um arquivo ZIP. Verifique o deploy.'
-        );
+        throw new Error('O servidor não retornou um arquivo ZIP.');
       }
 
-      return response.blob();
-    })
-    .then(blob => {
-      const downloadUrl = URL.createObjectURL(blob);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
 
-      link.href = downloadUrl;
+      link.href = url;
       link.download = 'blogger-seo-artigos.zip';
 
       document.body.appendChild(link);
       link.click();
       link.remove();
 
-      setTimeout(() => URL.revokeObjectURL(downloadUrl), 30000);
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
 
       showStatus(
         status,
-        'Download iniciado! Confira os arquivos baixados no seu dispositivo.',
+        'Download iniciado! Confira os arquivos baixados no dispositivo.',
         'success'
       );
-    })
-    .catch(error => {
+    } catch (error) {
       showStatus(
         status,
         error.message || 'Erro ao baixar os artigos.',
         'error'
       );
-    })
-    .finally(() => {
+    } finally {
       button.disabled = false;
       button.textContent = '📦 Baixar todos os artigos';
-    });
+    }
+  });
+
+  /*
+   * IMPORTAR ZIP CORRIGIDO
+   */
+  $('importZip').addEventListener('click', async () => {
+    const button = $('importZip');
+    const input = $('correctedZip');
+    const status = $('importStatus');
+    const results = $('importResults');
+
+    results.replaceChildren();
+
+    if (!blogId) {
+      showStatus(
+        status,
+        'Identificador do blog não encontrado. Volte e faça a análise novamente.',
+        'error'
+      );
+      return;
+    }
+
+    const file = input.files?.[0];
+
+    if (!file) {
+      showStatus(
+        status,
+        'Selecione primeiro o arquivo ZIP corrigido.',
+        'error'
+      );
+      return;
+    }
+
+    if (!/\.zip$/i.test(file.name)) {
+      showStatus(
+        status,
+        'O arquivo selecionado não é um ZIP.',
+        'error'
+      );
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      showStatus(
+        status,
+        'O ZIP ultrapassa o limite de 50 MB.',
+        'error'
+      );
+      return;
+    }
+
+    const csrf = getCsrfToken();
+
+    if (!csrf) {
+      showStatus(
+        status,
+        'Token de segurança não encontrado. Atualize a página e tente novamente.',
+        'error'
+      );
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    button.disabled = true;
+    button.textContent = 'Enviando e validando ZIP...';
+
+    showStatus(
+      status,
+      'Enviando o arquivo. Aguarde a validação e a criação dos backups...'
+    );
+
+    try {
+      const response = await fetch(
+        '/api/blogs/' +
+          encodeURIComponent(blogId) +
+          '/import-corrections',
+        {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'x-csrf-token': csrf
+          },
+          body: formData
+        }
+      );
+
+      let result = {};
+
+      try {
+        result = await response.json();
+      } catch {}
+
+      if (!response.ok) {
+        throw new Error(
+          result.message ||
+          result.error ||
+          'Não foi possível importar o ZIP.'
+        );
+      }
+
+      showStatus(
+        status,
+        'Importação concluída! ' +
+        result.total +
+        ' propostas foram criadas. Nenhum artigo foi publicado no Blogger.',
+        'success'
+      );
+
+      const heading = document.createElement('h3');
+      heading.textContent = 'Propostas criadas';
+      results.appendChild(heading);
+
+      const list = document.createElement('div');
+
+      (result.proposals || []).forEach(proposal => {
+        const item = document.createElement('div');
+        item.className = 'article';
+
+        const title = document.createElement('strong');
+        title.textContent = proposal.title || 'Artigo sem título';
+        item.appendChild(title);
+
+        const detail = document.createElement('p');
+        detail.textContent =
+          'Proposta #' + proposal.id +
+          ' — Situação: ' + (proposal.status || 'pendente');
+        item.appendChild(detail);
+
+        if (proposal.url) {
+          const link = document.createElement('a');
+          link.href = proposal.url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.textContent = 'Abrir artigo original';
+          item.appendChild(link);
+        }
+
+        list.appendChild(item);
+      });
+
+      results.appendChild(list);
+
+      const note = document.createElement('p');
+      note.className = 'muted';
+      note.textContent =
+        'As propostas foram guardadas no sistema. Revise-as antes de aprovar qualquer alteração.';
+      results.appendChild(note);
+
+      input.value = '';
+    } catch (error) {
+      showStatus(
+        status,
+        error.message || 'Erro ao importar o ZIP.',
+        'error'
+      );
+    } finally {
+      button.disabled = false;
+      button.textContent = '📥 Enviar ZIP e preparar correções';
+    }
   });
 
   /*
    * DOWNLOAD DE ARTIGO INDIVIDUAL
    */
+  function safeSlug(value) {
+    return String(value || 'artigo')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase()
+      .slice(0, 90) || 'artigo';
+  }
+
   function downloadArticle(article) {
     const html =
       article.content_html ||
@@ -438,7 +552,7 @@
 
     if (!html) {
       alert(
-        'O conteúdo HTML deste artigo não está disponível na análise. Faça uma nova sincronização e análise.'
+        'O conteúdo HTML não está disponível. Faça uma nova sincronização e análise.'
       );
       return;
     }
@@ -452,24 +566,13 @@
     const link = document.createElement('a');
 
     link.href = url;
-    link.download =
-      'artigo-' + safeSlug(article.title) + '.html';
+    link.download = 'artigo-' + safeSlug(article.title) + '.html';
 
     document.body.appendChild(link);
     link.click();
     link.remove();
 
     setTimeout(() => URL.revokeObjectURL(url), 10000);
-  }
-
-  function safeSlug(value) {
-    return String(value || 'artigo')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      .toLowerCase()
-      .slice(0, 90) || 'artigo';
   }
 
   /*
@@ -518,7 +621,7 @@
       return;
     }
 
-    container.innerHTML = '';
+    container.replaceChildren();
 
     articles.forEach(article => {
       const card = document.createElement('div');
@@ -540,41 +643,31 @@
       const problems = article.problems || [];
 
       const summary = document.createElement('p');
-      summary.textContent =
-        problems.length
-          ? problems.length + ' possível(is) conflito(s) encontrado(s).'
-          : 'Nenhum possível conflito identificado.';
+      summary.textContent = problems.length
+        ? problems.length + ' possível(is) conflito(s) encontrado(s).'
+        : 'Nenhum possível conflito identificado.';
       card.appendChild(summary);
 
       problems.forEach(problem => {
         const box = document.createElement('div');
         box.className = 'problem';
 
-        const risk = document.createElement('p');
-        risk.textContent = 'Risco: ' + (problem.risk || 'Não informado');
-        box.appendChild(risk);
-
-        const score = document.createElement('p');
-        score.textContent = 'Pontuação: ' + (problem.score ?? 'Não informada');
-        box.appendChild(score);
-
-        const related = document.createElement('p');
-        related.textContent =
+        const fields = [
+          'Risco: ' + (problem.risk || 'Não informado'),
+          'Pontuação: ' + (problem.score ?? 'Não informada'),
           'Artigo relacionado: ' +
-          (problem.relatedArticle?.title || 'Não informado');
-        box.appendChild(related);
-
-        const terms = document.createElement('p');
-        terms.textContent =
+            (problem.relatedArticle?.title || 'Não informado'),
           'Termos compartilhados: ' +
-          (problem.sharedTerms || []).join(', ');
-        box.appendChild(terms);
-
-        const recommendation = document.createElement('p');
-        recommendation.textContent =
+            (problem.sharedTerms || []).join(', '),
           'Recomendação: ' +
-          (problem.recommendation || 'Revisar manualmente.');
-        box.appendChild(recommendation);
+            (problem.recommendation || 'Revisar manualmente.')
+        ];
+
+        fields.forEach(value => {
+          const p = document.createElement('p');
+          p.textContent = value;
+          box.appendChild(p);
+        });
 
         card.appendChild(box);
       });
@@ -585,7 +678,6 @@
       downloadButton.addEventListener('click', () => {
         downloadArticle(article);
       });
-
       card.appendChild(downloadButton);
 
       const copyButton = document.createElement('button');
@@ -596,7 +688,6 @@
       copyButton.addEventListener('click', () => {
         copyProblems(article);
       });
-
       card.appendChild(copyButton);
 
       container.appendChild(card);
@@ -604,80 +695,6 @@
   }
 
   renderArticles();
-
-  /*
-   * RECEBER HTML CORRIGIDO E MOSTRAR PRÉVIA
-   */
-  $('correctedFile').addEventListener('change', event => {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
-
-    const status = $('uploadStatus');
-
-    if (!/\.(html|htm)$/i.test(file.name)) {
-      showStatus(
-        status,
-        'Selecione um arquivo HTML.',
-        'error'
-      );
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      showStatus(
-        status,
-        'O arquivo é muito grande. O limite desta prévia é 5 MB.',
-        'error'
-      );
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      const html = String(reader.result || '');
-
-      sessionStorage.setItem(
-        'bloggerCorrectedHtml',
-        html
-      );
-
-      sessionStorage.setItem(
-        'bloggerCorrectedFilename',
-        file.name
-      );
-
-      $('preview').srcdoc = html;
-      $('previewArea').classList.remove('hidden');
-
-      showStatus(
-        status,
-        'Arquivo carregado: ' +
-        file.name +
-        ' (' +
-        Math.ceil(file.size / 1024) +
-        ' KB). Nenhuma publicação foi feita.',
-        'success'
-      );
-    };
-
-    reader.onerror = () => {
-      showStatus(
-        status,
-        'Não foi possível ler o arquivo.',
-        'error'
-      );
-    };
-
-    reader.readAsText(file);
-  });
-
-  $('continueReview').addEventListener('click', () => {
-    alert(
-      'O arquivo foi guardado para revisão nesta sessão. A importação em lote e a publicação no Blogger ainda precisam ser implementadas. Nenhum artigo foi alterado.'
-    );
-  });
 
 })();
 </script>
