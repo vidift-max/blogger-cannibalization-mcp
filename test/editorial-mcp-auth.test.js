@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 
 import {
   isEditorialMcpConfigured,
-  authorizeEditorialMcpRequest
+  authorizeEditorialMcpRequest,
+  syncAgeSeconds
 } from '../src/editorial-mcp-auth.js';
 
 const env = {
@@ -35,4 +36,13 @@ test('MCP bearer authorization accepts only the configured token', () => {
   assert.equal(authorizeEditorialMcpRequest(good, env), true);
   assert.equal(authorizeEditorialMcpRequest(bad, env), false);
   assert.equal(authorizeEditorialMcpRequest(missing, env), false);
+});
+
+test('MCP freshness reports elapsed synchronization age', () => {
+  const now = Date.parse('2026-11-20T22:00:10Z');
+  assert.equal(
+    syncAgeSeconds('2026-11-20T22:00:00Z', now),
+    10
+  );
+  assert.equal(syncAgeSeconds(null, now), null);
 });
