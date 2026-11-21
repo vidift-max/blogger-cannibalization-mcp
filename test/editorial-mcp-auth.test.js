@@ -7,6 +7,7 @@ import {
   isEditorialMcpMethodAllowed,
   authorizeEditorialMcpRequest,
   editorialUseWarning,
+  isEditorialCorpusSafeForDecisions,
   syncAgeSeconds,
   syncFreshness
 } from '../src/editorial-mcp-auth.js';
@@ -152,4 +153,11 @@ test('editorial use warning follows corpus freshness status', () => {
   assert.match(editorialUseWarning('stale'), /Corpus is stale/);
   assert.match(editorialUseWarning('unknown'), /freshness is unknown/);
   assert.match(editorialUseWarning('unexpected'), /freshness is unknown/);
+});
+
+test('editorial decisions are allowed only with a fresh corpus', () => {
+  assert.equal(isEditorialCorpusSafeForDecisions('fresh'), true);
+  assert.equal(isEditorialCorpusSafeForDecisions('stale'), false);
+  assert.equal(isEditorialCorpusSafeForDecisions('unknown'), false);
+  assert.equal(isEditorialCorpusSafeForDecisions('unexpected'), false);
 });
