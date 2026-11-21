@@ -78,3 +78,16 @@ test('createArticleContract carries only context needed by the assembly pipeline
   assert.equal(contract.related_carousel.candidates.length, 1);
   assert.equal(contract.output.slots.includes('body'), true);
 });
+
+
+test('cria briefing de correção sem expor arquitetura da plataforma', () => {
+  const { createCorrectionRequest } = await import('../src/content-architecture.js');
+  const request = createCorrectionRequest({
+    document: { id: 7, document_type: 'article', title: 'Original', url: 'https://example.com/a' },
+    findings: [{ issue_type: 'topic_overlap_review', risk: 'MEDIUM', score: 0.5, recommendation: 'revisar intenção' }]
+  });
+  assert.equal(request.document.id, 7);
+  assert.equal(request.preserve_structure, true);
+  assert.equal(request.objective.includes('HTML/CSS/JS'), true);
+  assert.equal(Object.prototype.hasOwnProperty.call(request, 'html'), false);
+});
