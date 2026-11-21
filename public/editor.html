@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Editor — Blogger SEO Intelligence</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f8f9fa;color:#202124;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.topbar{height:64px;background:#fff;border-bottom:1px solid #dadce0;display:flex;align-items:center;gap:18px;padding:0 22px;position:sticky;top:0;z-index:5}.brand{font-weight:700;font-size:19px}.search{flex:1;max-width:560px;background:#f1f3f4;border-radius:24px;padding:11px 18px;color:#5f6368}.back{color:#174ea6;text-decoration:none}
+.layout{display:grid;grid-template-columns:245px minmax(0,1fr) 300px;min-height:calc(100vh - 64px)}.sidebar{background:#fff;border-right:1px solid #dadce0;padding:18px 12px}.nav{display:block;padding:11px 16px;border-radius:0 22px 22px 0;color:#3c4043;text-decoration:none;margin:2px 0}.nav.active,.nav:hover{background:#e8f0fe;color:#174ea6}
+main{min-width:0;padding:24px}.card{background:#fff;border:1px solid #dadce0;border-radius:12px;padding:18px;margin-bottom:16px}.editor{min-height:420px;border:1px solid #cfd3d7;border-radius:10px;padding:18px;background:#fff}.title{width:100%;border:0;outline:0;font-size:30px;font-weight:600;margin-bottom:18px}.content{min-height:330px;outline:0;line-height:1.7}.side{background:#fff;border-left:1px solid #dadce0;padding:18px}.tool{padding:13px 0;border-bottom:1px solid #eee}.tool:last-child{border-bottom:0}.badge{display:inline-block;padding:5px 10px;border-radius:16px;background:#fef7e0;color:#8a6116;font-size:12px;font-weight:600}.safe{background:#e6f4ea;color:#137333}.muted{color:#5f6368;font-size:13px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:20px;padding:11px 16px;font-weight:600;cursor:pointer;background:#1a73e8;color:#fff}.secondary{background:#f1f3f4;color:#202124}.publish{background:#188038}.blocked{opacity:.5;cursor:not-allowed}.field{width:100%;padding:10px;border:1px solid #dadce0;border-radius:8px;margin-top:7px}
+@media(max-width:1000px){.layout{grid-template-columns:210px 1fr}.side{grid-column:1/-1;border-left:0;border-top:1px solid #dadce0}.search{display:none}}@media(max-width:700px){.layout{display:block}.sidebar{display:none}main{padding:12px}.side{padding:12px}.title{font-size:24px}}
+</style>
+</head>
+<body>
+<header class="topbar"><span>☰</span><strong class="brand">Blogger SEO Intelligence</strong><div class="search">Pesquisar no blog, artigos e ferramentas</div><a class="back" href="/">← Artigos</a></header>
+<div class="layout">
+<aside class="sidebar">
+<a class="nav active" href="/editor.html">Artigos</a><a class="nav" href="#">Páginas</a><a class="nav" href="/analysis.html">SEO Intelligence</a><a class="nav" href="#">Estatísticas</a><a class="nav" href="#">Comentários</a><a class="nav" href="#">Categorias / Labels</a><a class="nav" href="#">Migração de domínio</a><a class="nav" href="#">Tema</a><a class="nav" href="#">Configurações</a>
+</aside>
+<main>
+<div class="card"><div class="actions"><button class="btn secondary" id="draft">Rascunho</button><button class="btn secondary" id="preview">Pré-visualizar</button><button class="btn publish blocked" id="publish" disabled>Publicar</button></div></div>
+<section class="card editor">
+<input class="title" id="title" placeholder="Título do artigo">
+<div class="content" id="content" contenteditable="true"><p>Comece a preparar o conteúdo aqui.</p></div>
+</section>
+<section class="card"><h3>Metadados</h3><label class="muted">Labels<input class="field" placeholder="economia, finanças, ..."></label><br><label class="muted">Permalink<input class="field" placeholder="/novo-artigo"></label><br><label class="muted">Meta description<input class="field" placeholder="Descrição para mecanismos de busca"></label></section>
+</main>
+<aside class="side">
+<div class="tool"><span class="badge">RASCUNHO</span><p class="muted">O conteúdo pode ser preparado sem autorização de publicação.</p></div>
+<div class="tool"><strong>SEO Intelligence</strong><p class="muted">Corpus: <span id="corpus">não consultado</span></p><p class="muted">Similaridade: <span id="similarity">não verificada</span></p><p class="muted">Decisão segura: <span id="safe">não verificada</span></p></div>
+<div class="tool"><strong>Prévia</strong><p class="muted">A pré-visualização é uma etapa independente da publicação.</p></div>
+<div class="tool"><strong>Aprovação</strong><p class="muted" id="approval">Aguardando revisão.</p></div>
+</aside>
+</div>
+<script>
+const state={workflow:'draft'};
+const publish=document.getElementById('publish');
+function render(){publish.disabled=state.workflow!=='approved';publish.classList.toggle('blocked',publish.disabled);document.getElementById('approval').textContent=state.workflow==='approved'?'Aprovado — publicação liberada.':'Aguardando revisão e aprovação.'}
+document.getElementById('preview').onclick=()=>{state.workflow='preview';document.getElementById('corpus').textContent='consultado';document.getElementById('similarity').textContent='sinal editorial';document.getElementById('safe').textContent='revisão necessária';render()};
+document.getElementById('draft').onclick=()=>{state.workflow='draft';render()};
+publish.onclick=()=>{if(state.workflow==='approved')alert('Publicação ainda requer confirmação explícita do usuário.')};
+render();
+</script>
+</body>
+</html>
