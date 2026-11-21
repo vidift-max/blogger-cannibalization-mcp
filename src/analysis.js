@@ -599,13 +599,15 @@ export function analyzePosts(posts) {
           {
             id: a.id,
             title: a.title,
-            url: a.url
+            url: a.url,
+            document_type: a.document_type || 'article'
           },
 
           {
             id: b.id,
             title: b.title,
-            url: b.url
+            url: b.url,
+            document_type: b.document_type || 'article'
           }
 
         ]
