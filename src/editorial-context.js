@@ -43,7 +43,7 @@ export function selectEditorialContext(corpus = [], queryText = '', limit = 8) {
       const titleMatches = matched.filter(token => titleTokens.has(token)).length;
       const labelMatches = matched.filter(token => labelsTokens.has(token)).length;
       const queryCoverage = matched.length / queryTokens.size;
-      const score = titleMatches * 4 + labelMatches * 2 + matched.length + queryCoverage * 4;
+      const score = queryCoverage * 8 + titleMatches * 2 + labelMatches + matched.length;
 
       return {
         id: item.id,
