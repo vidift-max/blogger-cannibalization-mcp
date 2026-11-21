@@ -31,3 +31,6 @@ test('storage adapter saves, loads and clears workspace',()=>{
 
 
 test('storage adapter supports an explicit namespaced key',()=>{const map=new Map();const storage={setItem:(k,v)=>map.set(k,v),getItem:k=>map.get(k)||null,removeItem:k=>map.delete(k)};const workspace=createContentWorkspace({title:'Namespace'});saveWorkspace(workspace,storage,'bsi:article');assert.equal(map.has('bsi:article'),true);assert.equal(map.has(DEFAULT_WORKSPACE_STORAGE_KEY),false);assert.equal(loadWorkspace(storage,'bsi:article').document.title,'Namespace');clearWorkspace(storage,'bsi:article');assert.equal(loadWorkspace(storage,'bsi:article'),null);});
+
+
+test('invalid editorial sections are rejected during restore',()=>{assert.equal(deserializeWorkspace(JSON.stringify({version:1,document:{},sections:[],workflow:{},metadata:null,seo_intelligence:{}})),null);assert.equal(deserializeWorkspace(JSON.stringify({version:1,document:{},sections:[],workflow:{},metadata:{},seo_intelligence:null})),null);});
