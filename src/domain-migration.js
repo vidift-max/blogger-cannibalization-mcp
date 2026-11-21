@@ -57,6 +57,19 @@ export function replaceDomainInText(text, oldDomainInput, newDomainInput) {
   return { text: result, replacements };
 }
 
+export function summarizeDomainMigration(documentPlans, themePlan = null) {
+  const documents = Array.isArray(documentPlans) ? documentPlans : [];
+  const summary = { articles: 0, pages: 0, documents_changed: 0, document_replacements: 0, theme_changed: Boolean(themePlan?.changed), theme_replacements: Number(themePlan?.replacements || 0), total_replacements: Number(themePlan?.replacements || 0) };
+  for (const document of documents) {
+    if (document.type === 'article') summary.articles++;
+    if (document.type === 'page') summary.pages++;
+    if (document.changed) summary.documents_changed++;
+    summary.document_replacements += Number(document.replacements || 0);
+  }
+  summary.total_replacements += summary.document_replacements;
+  return summary;
+}
+
 export function planThemeMigration(themeHtml, oldDomain, newDomain) {
   const source = String(themeHtml || '');
   const result = replaceDomainInText(source, oldDomain, newDomain);
