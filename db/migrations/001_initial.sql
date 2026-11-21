@@ -177,3 +177,22 @@ CREATE INDEX IF NOT EXISTS idx_correction_batch_items_post
 
 CREATE INDEX IF NOT EXISTS idx_correction_batch_items_status
   ON correction_batch_items(status);
+
+-- ============================================================
+-- PÁGINAS DO BLOGGER
+-- ============================================================
+CREATE TABLE IF NOT EXISTS pages (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  blog_id BIGINT NOT NULL REFERENCES blogs(id) ON DELETE CASCADE,
+  blogger_page_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  url TEXT,
+  content_html TEXT NOT NULL DEFAULT '',
+  content_text TEXT NOT NULL DEFAULT '',
+  updated_at TIMESTAMPTZ,
+  UNIQUE(user_id, blog_id, blogger_page_id)
+);
+
+CREATE INDEX IF NOT EXISTS pages_user_blog_idx
+ON pages(user_id, blog_id);
