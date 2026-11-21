@@ -37,6 +37,7 @@ main{min-width:0;padding:24px}.card{background:#fff;border:1px solid #dadce0;bor
 import { importClaudeHtmlToWorkspace } from '/src/claude-workspace-import.js';
 import { createOperatorSession, grantPublishCapability, canOperatorPublish } from '/src/operator-capabilities.js';
 import { transitionWorkspace, canPublishWorkspace, updateWorkspaceDocument } from '/src/content-workspace.js';
+import { saveWorkspace as persistWorkspace, loadWorkspace as restoreWorkspace } from '/src/editor-workspace-storage.js';
 const params=new URLSearchParams(location.search);
 const documentType=params.get('type')==='page'?'page':'article';
 document.documentElement.dataset.documentType=documentType;
@@ -49,8 +50,8 @@ document.querySelector('.nav.active').textContent=documentType==='page'?'Página
 const STORAGE_KEY='bsi:content-workspace:'+documentType;
 const state={workspace:null, documentType, operator:createOperatorSession({remote:true})};
 function syncEditorToWorkspace(){if(!state.workspace)return;updateWorkspaceDocument(state.workspace,{title:titleInput.value,contentHtml:document.getElementById('content').innerHTML});saveWorkspace();render();}
-function saveWorkspace(){if(state.workspace)localStorage.setItem(STORAGE_KEY,JSON.stringify(state.workspace));}
-function loadWorkspace(){try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return null;const workspace=JSON.parse(raw);if(!workspace||workspace.version!==1||!workspace.document||!workspace.workflow||!Array.isArray(workspace.sections))return null;return workspace;}catch(e){return null;}}
+function saveWorkspace(){if(!state.workspace)return;persistWorkspace(state.workspace,{setItem:(key,value)=>localStorage.setItem(STORAGE_KEY,value),getItem:key=>localStorage.getItem(STORAGE_KEY),removeItem:key=>localStorage.removeItem(STORAGE_KEY)});}
+function loadWorkspace(){return restoreWorkspace({setItem:(key,value)=>localStorage.setItem(STORAGE_KEY,value),getItem:key=>localStorage.getItem(STORAGE_KEY),removeItem:key=>localStorage.removeItem(STORAGE_KEY)});}
 const labelsInput=document.getElementById('labels');const permalinkInput=document.getElementById('permalink');const metaDescriptionInput=document.getElementById('metaDescription');
 function syncMetadataToWorkspace(){if(!state.workspace)return;state.workspace.metadata.labels=labelsInput.value.split(',').map(v=>v.trim()).filter(Boolean);state.workspace.metadata.permalink=permalinkInput.value;state.workspace.metadata.meta_description=metaDescriptionInput.value;saveWorkspace();}
 function hydrateWorkspace(workspace){if(!workspace)return false;state.workspace=workspace;state.operator=createOperatorSession({remote:true});titleInput.value=workspace.document.title;document.getElementById('content').innerHTML=workspace.document.content_html||'<p>Sem blocos de conteúdo extraíveis.</p>';labelsInput.value=(workspace.metadata?.labels||[]).join(', ');permalinkInput.value=workspace.metadata?.permalink||'';metaDescriptionInput.value=workspace.metadata?.meta_description||'';importStatus.textContent='Rascunho recuperado deste navegador; autorização de publicação não foi recuperada.';render();return true;}
