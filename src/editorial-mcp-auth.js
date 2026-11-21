@@ -42,3 +42,21 @@ export function syncAgeSeconds(syncedAt, now = Date.now()) {
     ? Math.floor(ms / 1000)
     : null;
 }
+
+
+export function syncFreshness(syncedAt, now = Date.now(), maxAgeSeconds = 86400) {
+  const ageSeconds = syncAgeSeconds(syncedAt, now);
+  const configuredMaxAge = Number(maxAgeSeconds);
+  const safeMaxAge = Number.isFinite(configuredMaxAge) && configuredMaxAge >= 0
+    ? configuredMaxAge
+    : 86400;
+
+  return {
+    status: ageSeconds === null
+      ? 'unknown'
+      : ageSeconds <= safeMaxAge
+        ? 'fresh'
+        : 'stale',
+    max_age_seconds: safeMaxAge
+  };
+}
