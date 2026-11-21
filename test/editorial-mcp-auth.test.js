@@ -93,4 +93,20 @@ test('MCP corpus freshness distinguishes fresh, stale and unknown sync state', (
     syncFreshness('2026-11-20T22:00:00Z', now, 'invalid'),
     { status: 'fresh', max_age_seconds: 86400 }
   );
+  assert.deepEqual(
+    syncFreshness('2026-11-20T22:00:00Z', now, ''),
+    { status: 'fresh', max_age_seconds: 86400 }
+  );
+  assert.deepEqual(
+    syncFreshness('2026-11-20T22:00:00Z', now, '   '),
+    { status: 'fresh', max_age_seconds: 86400 }
+  );
+  assert.deepEqual(
+    syncFreshness('2026-11-20T22:00:10Z', now, '0'),
+    { status: 'fresh', max_age_seconds: 0 }
+  );
+  assert.deepEqual(
+    syncFreshness('2026-11-20T22:00:09Z', now, '0'),
+    { status: 'stale', max_age_seconds: 0 }
+  );
 });
