@@ -1,4 +1,4 @@
-const ABSOLUTE_URL_RE = /https?:\/\/[^\s"'<>]+/gi;
+const ABSOLUTE_URL_RE = /(?:https?:)?\/\/[^\s"'<>]+/gi;
 const URL_ATTRIBUTE_RE = /\b(?:href|src|action|cite|poster|formaction|data-src|data-href|content)\s*=\s*(["'])(.*?)\1/gi;
 
 function normalizeDomain(value) {
@@ -21,8 +21,9 @@ function matchesDomain(urlValue, oldDomain) {
 }
 
 function replaceAbsoluteUrl(value, oldDomain, newDomain) {
-  if (!matchesDomain(value, oldDomain)) return value;
-  const url = new URL(value);
+  const candidate = /^\/\//.test(value) ? `https:${value}` : value;
+  if (!matchesDomain(candidate, oldDomain)) return value;
+  const url = new URL(candidate);
   const replacement = new URL(newDomain);
   url.protocol = replacement.protocol;
   url.hostname = replacement.hostname;
