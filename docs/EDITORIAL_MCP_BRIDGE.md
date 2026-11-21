@@ -39,7 +39,8 @@ The bridge:
 - does not publish anything to Blogger;
 - uses a scoped blog ID configured by the deployment;
 - returns `401` for invalid bearer credentials;
-- returns `503` when the bridge is not explicitly configured.
+- returns `503` when the bridge is not explicitly configured;
+- applies a per-IP request limit to the `/mcp` endpoint before MCP processing.
 
 The token is a deployment secret and must never be committed to Git.
 
