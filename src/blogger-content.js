@@ -22,21 +22,21 @@ export function normalizeBloggerDocument(item = {}) {
 
 export function htmlToText(html = '') {
   return String(html)
-    .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')
-    .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')
-    .replace(/<noscript[\\s\\S]*?<\\/noscript>/gi, ' ')
-    .replace(/<br\\s*\\/?>(?=\\S)/gi, '\\n')
-    .replace(/<\\/p>|<\\/div>|<\\/li>|<\\/h[1-6]>/gi, '\\n')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<br\s*\/?>(?=\S)/gi, '\n')
+    .replace(/<\/p>|<\/div>|<\/li>|<\/h[1-6]>/gi, '\n')
     .replace(/<[^>]+>/g, ' ')
     .replace(ENTITY_RE, ' ')
     .replace(/&[a-z]+;/gi, ' ')
-    .replace(/&#\\d+;/g, ' ')
-    .replace(/\\s+/g, ' ')
+    .replace(/&#\d+;/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
 function cleanText(value) {
-  return String(value || '').replace(/\\s+/g, ' ').trim();
+  return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
 function cleanUrl(value) {
@@ -60,5 +60,5 @@ export function contentFingerprint(item = {}) {
     normalized.content_html,
     normalized.labels.join('|'),
     normalized.updated_at || ''
-  ].join('\\n');
+  ].join('\n');
 }
