@@ -36,3 +36,12 @@ test('diferencia intenção de busca para evitar falso positivo', () => {
   assert.equal(out[0].intent_b, 'commercial_comparison');
   assert.equal(out[0].distinct_intent, true);
 });
+
+test('headings entram como evidência de sobreposição estrutural', () => {
+  const out = analyzePosts([
+    { id: 1, title: 'Credit card guide', content_html: '<h2>Fees</h2><h2>Rewards</h2><p>cards</p>', content_text: 'cards fees rewards' },
+    { id: 2, title: 'Best credit cards', content_html: '<h2>Fees</h2><h2>Rewards</h2><p>cards</p>', content_text: 'cards fees rewards' }
+  ]);
+  assert.ok(out.length > 0);
+  assert.equal(out[0].heading_similarity, 1);
+});
