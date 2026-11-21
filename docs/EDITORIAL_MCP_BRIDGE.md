@@ -60,7 +60,7 @@ It does not claim that GPT-6 can monitor Blogger continuously in the background.
 
 Adding this endpoint makes the application technically MCP-compatible, but it does **not** by itself install or connect the tool to ChatGPT.
 
-A compatible ChatGPT MCP/connector configuration still has to be created and authorized for the deployed `/mcp` endpoint. Until that external connection is configured and tested, direct GPT-6 access remains BLOCKED at the integration boundary.
+A compatible ChatGPT MCP/connector configuration still has to be created and authorized for the deployed `/mcp` endpoint. Before that external step, the repository must pass its automated protocol and route tests. Until that external connection is configured and tested, direct GPT-6 access remains BLOCKED at the integration boundary.
 
 The application-side bridge therefore must be reported as:
 
