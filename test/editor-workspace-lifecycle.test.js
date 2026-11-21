@@ -52,3 +52,29 @@ test('editing a restored preview returns it to draft and keeps publication block
   assert.equal(reloaded.workflow.publication_allowed, false);
   assert.equal(canPublishWorkspace(reloaded), false);
 });
+
+test('page and article drafts persist independently through import, reload and clear', () => {
+  const storage = createMemoryStorage();
+  const articleKey = getWorkspaceStorageKey('article');
+  const pageKey = getWorkspaceStorageKey('page');
+  const article = importClaudeHtmlToWorkspace('<h1>Artigo principal</h1><p>Conteúdo do artigo.</p>', { documentType: 'article' });
+  const page = importClaudeHtmlToWorkspace('<h1>Sobre o projeto</h1><p>Conteúdo da página.</p>', { documentType: 'page' });
+
+  assert.equal(article.ok, true);
+  assert.equal(page.ok, true);
+  saveWorkspace(article.workspace, storage, articleKey);
+  saveWorkspace(page.workspace, storage, pageKey);
+
+  const restoredArticle = loadWorkspace(storage, articleKey);
+  const restoredPage = loadWorkspace(storage, pageKey);
+  assert.equal(restoredArticle.document.type, 'article');
+  assert.equal(restoredArticle.document.title, 'Artigo principal');
+  assert.equal(restoredPage.document.type, 'page');
+  assert.equal(restoredPage.document.title, 'Sobre o projeto');
+
+  storage.removeItem(pageKey);
+  assert.equal(loadWorkspace(storage, pageKey), null);
+  assert.equal(loadWorkspace(storage, articleKey).document.title, 'Artigo principal');
+  assert.equal(canPublishWorkspace(restoredArticle), false);
+  assert.equal(canPublishWorkspace(restoredPage), false);
+});
