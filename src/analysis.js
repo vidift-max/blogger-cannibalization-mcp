@@ -296,15 +296,9 @@ function intentDifference(a, b) {
  * Detecta os principais tópicos de um artigo.
  */
 function topicTermMatches(normalized, term) {
-  const escaped = normalize(term).replace(/[.*+?^${}()|[\\]\\]/g, '\\function detectTopics(text) {
-  const normalized = normalize(text);
-
-  return TOPIC_GROUPS
-    .map(group => {
-      const matches = group.terms.filter(term =>
-        normalized.includes(term)
-      );');
-  return new RegExp('(?:^|\\\\s)' + escaped + '(?=\\\\s|$)', 'i').test(normalized);
+  const haystack = ` ${normalized} `;
+  const needle = ` ${normalize(term)} `;
+  return haystack.includes(needle);
 }
 
 function detectTopics(text) {
