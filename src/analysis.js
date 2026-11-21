@@ -250,8 +250,7 @@ function summarizeFinding(finding) {
 }
 
 function classifySearchIntent(tokens) {
-  const intentTokens = normalize(tokens).split(/\s+/).filter(Boolean);
-  const groups = intentGroups(intentTokens).map(item => item.index);
+  const groups = intentGroups(tokens).map(item => item.index);
   if (groups.includes(4)) return 'informational_how_to';
   if (groups.includes(3)) return 'commercial_comparison';
   if (groups.includes(1)) return 'review';
@@ -463,7 +462,7 @@ function comparePosts(a, b) {
   /*
    * Uma palavra genérica em comum não é suficiente.
    */
-  if (!enoughSharedTerms && !hasSharedPhrase) {
+  if (!enoughSharedTerms && !hasSharedPhrase && headingSimilarity < 0.8) {
     score = Math.min(score, 0.25);
   }
 
