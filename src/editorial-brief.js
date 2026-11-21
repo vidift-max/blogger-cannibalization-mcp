@@ -21,6 +21,12 @@ function buildEditorialBrief({ corpus, query, sourceTitle = '', limit = 8 }) {
       posts: finding.posts
     }));
 
+  const highRiskDocuments = [...new Set(
+    findings
+      .filter(finding => finding.risk === 'HIGH')
+      .flatMap(finding => (finding.posts || []).map(post => String(post.id)))
+  )];
+
   const occupiedTopics = [
     ...new Set(
       findings
@@ -34,7 +40,8 @@ function buildEditorialBrief({ corpus, query, sourceTitle = '', limit = 8 }) {
     source_title: sourceTitle,
     relevant_documents: context,
     cannibalization_findings: findings,
-    occupied_topics: occupiedTopics
+    occupied_topics: occupiedTopics,
+    high_risk_document_ids: highRiskDocuments
   };
 }
 
