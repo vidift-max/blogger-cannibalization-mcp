@@ -5,7 +5,7 @@ import { createSandboxedPreviewDocument } from '../src/editor-preview.js';
 function text(nodeValue) { return { nodeType: 3, nodeValue }; }
 function element(tagName, children = [], attrs = {}) {
   return {
-    nodeType: 1, tagName, childNodes: children,
+    nodeType: 1, tagName, namespaceURI: 'http://www.w3.org/1999/xhtml', childNodes: children,
     getAttribute(name) { return attrs[name] ?? null; }
   };
 }
