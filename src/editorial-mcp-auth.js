@@ -14,10 +14,14 @@ export function isEditorialMcpMethodAllowed(method) {
 }
 
 export function isEditorialMcpConfigured(env = process.env) {
-  return Boolean(
-    env.MCP_EDITORIAL_TOKEN &&
-    env.MCP_EDITORIAL_BLOG_ID
-  );
+  const token = typeof env.MCP_EDITORIAL_TOKEN === 'string'
+    ? env.MCP_EDITORIAL_TOKEN.trim()
+    : '';
+  const blogId = typeof env.MCP_EDITORIAL_BLOG_ID === 'string'
+    ? env.MCP_EDITORIAL_BLOG_ID.trim()
+    : '';
+
+  return Boolean(token && blogId);
 }
 
 export function authorizeEditorialMcpRequest(req, env = process.env) {
