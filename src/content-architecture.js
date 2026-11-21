@@ -259,8 +259,9 @@ export function createCorrectionProviderInput(request, {
     relevant_context: relevantContext,
     allowed_interaction_types: [...allowedInteractionTypes],
     constraints: {
-      structured_content_only: true,
-      html_allowed: false,
+      structured_content_only: false,
+      output_transport: 'manual_html',
+      html_allowed: true,
       css_allowed: false,
       javascript_allowed: false,
       component_markup_allowed: false,
