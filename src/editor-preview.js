@@ -7,9 +7,9 @@ function escapeHtml(value) {
   })[char]);
 }
 
-export function createSandboxedPreviewDocument({ title = '', contentHtml = '', sanitizeHtml = sanitizeEditorHtml } = {}) {
+export function createSandboxedPreviewDocument({ title = '', contentHtml = '' } = {}) {
   const safeTitle = escapeHtml(title);
-  const content = sanitizeHtml(String(contentHtml ?? ''));
+  const content = sanitizeEditorHtml(String(contentHtml ?? ''));
   return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
     '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; style-src \'unsafe-inline\'; form-action \'none\'; base-uri \'none\'">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
