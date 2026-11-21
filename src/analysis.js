@@ -250,7 +250,8 @@ function summarizeFinding(finding) {
 }
 
 function classifySearchIntent(tokens) {
-  const groups = intentGroups(tokens).map(item => item.index);
+  const intentTokens = normalize(tokens).split(/\s+/).filter(Boolean);
+  const groups = intentGroups(intentTokens).map(item => item.index);
   if (groups.includes(4)) return 'informational_how_to';
   if (groups.includes(3)) return 'commercial_comparison';
   if (groups.includes(1)) return 'review';
@@ -422,8 +423,8 @@ function comparePosts(a, b) {
   const intentInfo = intentRelation(titleA, titleB);
 
   const topicInfo = compareTopics(
-    `${a.title || ''} ${a.content_text || a.content_html || ''}`,
-    `${b.title || ''} ${b.content_text || b.content_html || ''}`
+    articleText(a),
+    articleText(b)
   );
 
   const topicDiff = topicDifference(topicInfo);
