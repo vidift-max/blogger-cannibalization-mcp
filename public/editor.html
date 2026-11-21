@@ -21,10 +21,10 @@ main{min-width:0;padding:24px}.card{background:#fff;border:1px solid #dadce0;bor
 <main>
 <div class="card"><div class="actions"><button class="btn secondary" id="draft">Rascunho</button><button class="btn secondary" id="preview">Pré-visualizar</button><button class="btn publish blocked" id="publish" disabled>Publicar</button></div></div>
 <section class="card editor">
-<input class="title" id="title" placeholder="Título do artigo">
+<input class="title" id="title" placeholder="Título">
 <div class="content" id="content" contenteditable="true"><p>Comece a preparar o conteúdo aqui.</p></div>
 </section>
-<section class="card"><h3>Metadados</h3><label class="muted">Labels<input class="field" placeholder="economia, finanças, ..."></label><br><label class="muted">Permalink<input class="field" placeholder="/novo-artigo"></label><br><label class="muted">Meta description<input class="field" placeholder="Descrição para mecanismos de busca"></label></section>
+<section class="card"><h3>Metadados</h3><div id="articleOnly"><label class="muted">Labels<input class="field" placeholder="economia, finanças, ..."></label><br><label class="muted">Permalink<input class="field" placeholder="/novo-artigo"></label><br><label class="muted">Meta description<input class="field" placeholder="Descrição para mecanismos de busca"></label></div></section>
 </main>
 <aside class="side">
 <div class="tool"><span class="badge">RASCUNHO</span><p class="muted">O conteúdo pode ser preparado sem autorização de publicação.</p></div>
@@ -34,6 +34,15 @@ main{min-width:0;padding:24px}.card{background:#fff;border:1px solid #dadce0;bor
 </aside>
 </div>
 <script>
+const params=new URLSearchParams(location.search);
+const documentType=params.get('type')==='page'?'page':'article';
+document.documentElement.dataset.documentType=documentType;
+document.title=documentType==='page'?'Página — Blogger SEO Intelligence':'Artigo — Blogger SEO Intelligence';
+const titleInput=document.getElementById('title');
+titleInput.placeholder=documentType==='page'?'Título da página':'Título do artigo';
+const articleOnly=document.getElementById('articleOnly');
+if(documentType==='page') articleOnly.hidden=true;
+document.querySelector('.nav.active').textContent=documentType==='page'?'Páginas':'Artigos';
 const state={workflow:'draft'};
 const publish=document.getElementById('publish');
 function render(){publish.disabled=state.workflow!=='approved';publish.classList.toggle('blocked',publish.disabled);document.getElementById('approval').textContent=state.workflow==='approved'?'Aprovado — publicação liberada.':'Aguardando revisão e aprovação.'}
