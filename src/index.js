@@ -2,6 +2,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import { migrate, pool } from './db.js';
 import { router } from './routes.js';
+import { handleEditorialMcp } from './editorial-mcp.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -28,6 +29,9 @@ app.get('/healthz', async (_req, res) => {
   try { await pool.query('SELECT 1'); res.json({ ok: true }); }
   catch { res.status(503).json({ ok: false }); }
 });
+app.post('/mcp', handleEditorialMcp);
+app.get('/mcp', handleEditorialMcp);
+app.delete('/mcp', handleEditorialMcp);
 app.use('/api', router);
 app.use((err, _req, res, _next) => {
   console.error('[request]', err.message);
