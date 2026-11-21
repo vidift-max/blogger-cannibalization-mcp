@@ -25,3 +25,14 @@ test('labels ajudam a sustentar a relação temática sem decidir sozinhas', () 
   assert.ok(out.length > 0);
   assert.ok(out[0].shared_topics.includes('banking'));
 });
+
+test('diferencia intenção de busca para evitar falso positivo', () => {
+  const out = analyzePosts([
+    { id: 1, title: 'How to compare checking accounts', content_text: 'steps to compare accounts' },
+    { id: 2, title: 'Best checking accounts', content_text: 'comparison of top accounts' }
+  ]);
+  assert.ok(out.length > 0);
+  assert.equal(out[0].intent_a, 'informational_how_to');
+  assert.equal(out[0].intent_b, 'commercial_comparison');
+  assert.equal(out[0].distinct_intent, true);
+});
