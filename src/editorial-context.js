@@ -10,17 +10,17 @@ how what when where why your you we our they their them can could should
 would will may might new latest more most other some any all each
 para com uma um de da do das dos que como em no na nos nas seu sua seus
 sobre entre pelo pela pelos pelas artigo artigos guia melhor melhores
-porque para este esta estes estas esse essa esses essas isso aquilo
-`.split(/\\s+/).filter(Boolean));
+porque para este esta estes essas esse essa esses essas isso aquilo
+`.split(/\s+/).filter(Boolean));
 
 function tokenize(value) {
   return new Set(
     String(value || '')
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\\u0300-\\u036f]/g, '')
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, ' ')
-      .split(/\\s+/)
+      .split(/\s+/)
       .filter(token => token.length >= 4 && !STOP_WORDS.has(token))
   );
 }
