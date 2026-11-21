@@ -36,7 +36,7 @@ main{min-width:0;padding:24px}.card{background:#fff;border:1px solid #dadce0;bor
 <script type="module">
 import { importClaudeHtmlToWorkspace } from '/src/claude-workspace-import.js';
 import { createOperatorSession, grantPublishCapability, canOperatorPublish } from '/src/operator-capabilities.js';
-import { transitionWorkspace, canPublishWorkspace } from '/src/content-workspace.js';
+import { transitionWorkspace, canPublishWorkspace, updateWorkspaceDocument } from '/src/content-workspace.js';
 const params=new URLSearchParams(location.search);
 const documentType=params.get('type')==='page'?'page':'article';
 document.documentElement.dataset.documentType=documentType;
@@ -48,6 +48,7 @@ if(documentType==='page') articleOnly.hidden=true;
 document.querySelector('.nav.active').textContent=documentType==='page'?'Páginas':'Artigos';
 const STORAGE_KEY='bsi:content-workspace:'+documentType;
 const state={workspace:null, documentType, operator:createOperatorSession({remote:true})};
+function syncEditorToWorkspace(){if(!state.workspace)return;updateWorkspaceDocument(state.workspace,{title:titleInput.value,contentHtml:document.getElementById('content').innerHTML});saveWorkspace();render();}
 function saveWorkspace(){if(state.workspace)localStorage.setItem(STORAGE_KEY,JSON.stringify(state.workspace));}
 function loadWorkspace(){try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return null;const workspace=JSON.parse(raw);if(!workspace||workspace.version!==1||!workspace.document||!workspace.workflow||!Array.isArray(workspace.sections))return null;return workspace;}catch(e){return null;}}
 function hydrateWorkspace(workspace){if(!workspace)return false;state.workspace=workspace;state.operator=createOperatorSession({remote:true});titleInput.value=workspace.document.title;document.getElementById('content').innerHTML=workspace.document.content_html||'<p>Sem blocos de conteúdo extraíveis.</p>';importStatus.textContent='Rascunho recuperado deste navegador; autorização de publicação não foi recuperada.';render();return true;}
@@ -72,10 +73,12 @@ importFile.onchange=async()=> {
   importStatus.textContent='HTML normalizado e importado como rascunho; publicação continua bloqueada.';
   render();
 };
+titleInput.addEventListener('input',syncEditorToWorkspace);
+document.getElementById('content').addEventListener('input',syncEditorToWorkspace);
 const publish=document.getElementById('publish');
 function render(){const workflow=state.workspace?.workflow?.state||'draft';const publicationAllowed=state.workspace ? canPublishWorkspace(state.workspace) : false;publish.disabled=workflow!=='approved' || !publicationAllowed || !canOperatorPublish(state.operator);publish.classList.toggle('blocked',publish.disabled);document.getElementById('approval').textContent=workflow==='approved'?'Aprovado — publicação liberada.':'Aguardando revisão e aprovação.';if(state.workspace) saveWorkspace();}
 document.getElementById('preview').onclick=()=>{if(!state.workspace)return;try{transitionWorkspace(state.workspace,'review');transitionWorkspace(state.workspace,'preview');}catch(e){document.getElementById('approval').textContent='Transição de prévia indisponível.';return;}document.getElementById('corpus').textContent='consultado';document.getElementById('similarity').textContent='sinal editorial';document.getElementById('safe').textContent='revisão necessária';render()};
-document.getElementById('draft').onclick=()=>{if(!state.workspace)return;const current=state.workspace.workflow.state;try{if(current==='review')transitionWorkspace(state.workspace,'draft');else if(current==='preview')transitionWorkspace(state.workspace,'review');else if(current==='approved')transitionWorkspace(state.workspace,'preview');render();}catch(e){document.getElementById('approval').textContent='Não foi possível retornar o workspace.';}};
+document.getElementById('draft').onclick=()=>{if(!state.workspace)return;syncEditorToWorkspace();const current=state.workspace.workflow.state;try{if(current==='review')transitionWorkspace(state.workspace,'draft');else if(current==='preview')transitionWorkspace(state.workspace,'review');else if(current==='approved')transitionWorkspace(state.workspace,'preview');render();}catch(e){document.getElementById('approval').textContent='Não foi possível retornar o workspace.';}};
 const approve=document.createElement('button');
 approve.className='btn secondary';
 approve.id='approve';
