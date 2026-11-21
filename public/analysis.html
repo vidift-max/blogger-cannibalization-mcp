@@ -236,6 +236,10 @@
 .action-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .draft-badge{display:inline-block;padding:5px 10px;border-radius:16px;background:#fef7e0;color:#8a6116;font-size:12px;font-weight:600}
 @media(max-width:900px){.analysis-layout{grid-template-columns:1fr}.analysis-side{position:static}}
+</style><style>
+.editorial-state{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.state{padding:6px 11px;border-radius:16px;font-size:12px;font-weight:600}.state.safe{background:#e6f4ea;color:#137333}.state.review{background:#fef7e0;color:#8a6116}.state.blocked{background:#fce8e6;color:#c5221f}
+.decision-box{padding:14px;background:#f8f9fa;border:1px solid #dadce0;border-radius:10px;margin-top:14px}
+.decision-box strong{display:block;margin-bottom:5px}.decision-box p{margin:5px 0}
 </style></head>
 
 <body>
@@ -1685,7 +1689,10 @@
 </script>
 
 </section><aside class="analysis-side">
-<div class="card"><span class="draft-badge">ANÁLISE — SEM PUBLICAÇÃO</span><h3>Próximas ações</h3>
+<div class="card"><span class="draft-badge">ANÁLISE — SEM PUBLICAÇÃO</span><div class="editorial-state">
+<span class="state safe">CORPUS CONSULTADO</span>
+<span class="state review">REVISÃO NECESSÁRIA</span>
+</div><h3>Próximas ações</h3><div class="decision-box"><strong>Regra de decisão</strong><p class="muted">Similaridade é um sinal editorial, não uma confirmação de canibalização. A decisão de publicar continua separada da análise.</p></div>
 <div class="tool-item"><strong>1. Revisar</strong><br><span class="muted">Verifique os possíveis conflitos encontrados.</span></div>
 <div class="tool-item"><strong>2. Preparar conteúdo</strong><br><span class="muted">Leve o foco recomendado para a criação.</span></div>
 <div class="tool-item"><strong>3. Pré-visualizar</strong><br><span class="muted">Confira antes de qualquer aprovação.</span></div>
