@@ -8,9 +8,9 @@ The bridge is intentionally narrower than the authenticated application API. It 
 
 ## MCP endpoint
 
-- HTTP endpoint: `/mcp`
+- HTTP endpoint: `/mcp` (POST only)
+- Transport: MCP Streamable HTTP in stateless JSON-response mode
 - Authentication: `Authorization: Bearer <MCP_EDITORIAL_TOKEN>`
-- Transport: MCP Streamable HTTP
 - Tool: `get_editorial_brief`
 
 Tool inputs:
@@ -40,7 +40,9 @@ The bridge:
 - uses a scoped blog ID configured by the deployment;
 - returns `401` for invalid bearer credentials;
 - returns `503` when the bridge is not explicitly configured;
-- applies a per-IP request limit to the `/mcp` endpoint before MCP processing.
+- applies a per-IP request limit to the `/mcp` endpoint before MCP processing;
+- rejects non-POST requests with `405`;
+- validates browser `Origin` headers against `MCP_EDITORIAL_ALLOWED_ORIGINS` when configured.
 
 The token is a deployment secret and must never be committed to Git.
 
