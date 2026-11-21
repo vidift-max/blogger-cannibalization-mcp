@@ -110,6 +110,12 @@ function createServer() {
 }
 
 export async function handleEditorialMcp(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    res.status(405).json({ error: 'method_not_allowed' });
+    return;
+  }
+
   if (!isEditorialMcpConfigured()) {
     res.status(503).json({
       error: 'editorial_mcp_not_configured'
