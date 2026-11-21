@@ -21,3 +21,9 @@ export function authorizeEditorialMcpRequest(req, env = process.env) {
     sha256(env.MCP_EDITORIAL_TOKEN)
   );
 }
+
+export function syncAgeSeconds(syncedAt, now = Date.now()) {
+  if (!syncedAt) return null;
+  const ms = now - new Date(syncedAt).getTime();
+  return Number.isFinite(ms) ? Math.max(0, Math.floor(ms / 1000)) : null;
+}
