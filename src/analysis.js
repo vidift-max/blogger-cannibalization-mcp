@@ -250,7 +250,8 @@ function summarizeFinding(finding) {
 }
 
 function classifySearchIntent(tokens) {
-  const groups = intentGroups(tokens).map(item => item.index);
+  const intentTokens = Array.isArray(tokens) ? tokens : words(tokens);
+  const groups = intentGroups(intentTokens).map(item => item.index);
   if (groups.includes(4)) return 'informational_how_to';
   if (groups.includes(3)) return 'commercial_comparison';
   if (groups.includes(1)) return 'review';
