@@ -54,3 +54,13 @@ test('invalid direct publication from draft is rejected', () => {
     /invalid_workspace_transition/
   );
 });
+
+test('editing workspace document updates content and returns non-draft state to draft', () => {
+  const workspace=createContentWorkspace({title:'Original',contentHtml:'<p>Original</p>'});
+  transitionWorkspace(workspace,'review');
+  updateWorkspaceDocument(workspace,{title:'Editado',contentHtml:'<p>Novo</p>'});
+  assert.equal(workspace.document.title,'Editado');
+  assert.equal(workspace.document.content_html,'<p>Novo</p>');
+  assert.equal(workspace.workflow.state,'draft');
+  assert.equal(workspace.workflow.publication_allowed,false);
+});
