@@ -44,7 +44,7 @@ test('sanitizer drops active subtrees and strips event/style attributes', () => 
 test('sanitizer keeps only safe links and removes unsafe URL schemes', () => {
   const html = sanitizeWithNodes([
     element('a', [text('safe')], { href: 'https://example.com/path', target: '_blank', onclick: 'x' }),
-    element('a', [text('unsafe')], { href: 'javascript:alert(1)' })
+    element('a', [text('unsafe')], { href: 'java\\nscript:alert(1)' })
   ]);
   assert.equal(html, '<a href="https://example.com/path">safe</a>unsafe');
 });
@@ -62,10 +62,9 @@ test('sanitizer rejects whitespace-obfuscated and non-web URL schemes', () => {
 
 test('sanitizer rejects tabs, newlines, and control characters in URLs', () => {
   const html = sanitizeWithNodes([
-    element('a', [text('tab')], { href: 'java	script:alert(1)' }),
-    element('a', [text('newline')], { href: 'java
-script:alert(1)' }),
-    element('a', [text('carriage return')], { href: 'javascript:alert(1)' }),
+    element('a', [text('tab')], { href: 'java\\nscript:alert(1)' }),
+    element('a', [text('newline')], { href: 'java\\nscript:alert(1)' }),
+    element('a', [text('carriage return')], { href: 'java\\nscript:alert(1)' }),
     element('a', [text('control')], { href: 'https://example.com/\u0007path' }),
     element('a', [text('valid')], { href: 'https://example.com/path' })
   ]);
@@ -75,7 +74,7 @@ script:alert(1)' }),
 test('sanitizer rejects malformed protocol prefixes and URL-like obfuscation', () => {
   const html = sanitizeWithNodes([
     element('a', [text('encoded')], { href: 'java%73cript:alert(1)' }),
-    element('a', [text('colon')], { href: 'java\u003Ascript:alert(1)' }),
+    element('a', [text('colon')], { href: 'java\\u003Ascript:alert(1)' }),
     element('a', [text('fragment')], { href: '#javascript:alert(1)' }),
     element('a', [text('relative path')], { href: '/javascript:alert(1)' }),
     element('a', [text('mailto')], { href: 'mailto:test@example.com' })
