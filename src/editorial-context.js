@@ -42,7 +42,8 @@ export function selectEditorialContext(corpus = [], queryText = '', limit = 8) {
 
       const titleMatches = matched.filter(token => titleTokens.has(token)).length;
       const labelMatches = matched.filter(token => labelsTokens.has(token)).length;
-      const score = titleMatches * 4 + labelMatches * 2 + matched.length;
+      const queryCoverage = matched.length / queryTokens.size;
+      const score = titleMatches * 4 + labelMatches * 2 + matched.length + queryCoverage * 4;
 
       return {
         id: item.id,
@@ -51,11 +52,12 @@ export function selectEditorialContext(corpus = [], queryText = '', limit = 8) {
         document_type: item.document_type || 'article',
         labels: Array.isArray(item.labels) ? item.labels : [],
         score,
+        query_coverage: Number(queryCoverage.toFixed(3)),
         matched_terms: matched,
         excerpt: String(item.content_text || '').slice(0, 500)
       };
     })
     .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score || String(a.title).localeCompare(String(b.title)))
+    .sort((a, b) => b.score - a.score || b.query_coverage - a.query_coverage || String(a.title).localeCompare(String(b.title)))
     .slice(0, Math.max(1, Math.min(Number(limit) || 8, 20)));
 }
