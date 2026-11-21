@@ -11,6 +11,11 @@ app.use(express.json({ limit: '1mb' }));
 app.use('/mcp', (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  const key = `mcp:${req.ip}:${Math.floor(Date.now() / 60000)}`;
+  const count = (buckets.get(key) || 0) + 1;
+  buckets.set(key, count);
+  if (buckets.size > 5000) buckets.clear();
+  if (count > 60) return res.status(429).json({ error: 'mcp_rate_limit_exceeded' });
   next();
 });
 app.use(cookieParser());
