@@ -168,6 +168,93 @@ export function validateProviderOutput(value) {
 }
 
 
+
+export const CORRECTION_OUTPUT_VERSION = 1;
+
+const FORBIDDEN_PROVIDER_KEYS = Object.freeze([
+  'html',
+  'css',
+  'javascript',
+  'script',
+  'markup',
+  'component',
+  'component_markup',
+  'architecture',
+  'architecture_command',
+  'template',
+  'stylesheet',
+  'style',
+  'url'
+]);
+
+function containsImplementationMarkup(value) {
+  if (typeof value !== 'string') return false;
+  return /<\\/?[a-z][^>]*>|<script\\b|javascript:/i.test(value);
+}
+
+function findForbiddenProviderFields(value, path = '') {
+  const errors = [];
+  if (!value || typeof value !== 'object') return errors;
+
+  for (const [key, child] of Object.entries(value)) {
+    const normalizedKey = key.toLowerCase();
+    const childPath = path ? `${path}.${key}` : key;
+
+    if (FORBIDDEN_PROVIDER_KEYS.includes(normalizedKey)) {
+      errors.push(`forbidden_provider_field:${childPath}`);
+    }
+
+    if (containsImplementationMarkup(child)) {
+      errors.push(`implementation_markup_forbidden:${childPath}`);
+    }
+
+    if (child && typeof child === 'object') {
+      errors.push(...findForbiddenProviderFields(child, childPath));
+    }
+  }
+
+  return errors;
+}
+
+export function createCorrectionProviderInput(request, {
+  relevantContext = [],
+  allowedInteractionTypes = INTERACTION_TYPES
+} = {}) {
+  return {
+    version: CORRECTION_OUTPUT_VERSION,
+    task: 'editorial_correction',
+    objective: request?.objective || '',
+    preserve_structure: request?.preserve_structure !== false,
+    document: request?.document || {},
+    findings: Array.isArray(request?.findings) ? request.findings : [],
+    relevant_context: relevantContext,
+    allowed_interaction_types: [...allowedInteractionTypes],
+    constraints: {
+      structured_content_only: true,
+      html_allowed: false,
+      css_allowed: false,
+      javascript_allowed: false,
+      component_markup_allowed: false,
+      architecture_commands_allowed: false,
+      carousel_urls_selected_by: 'platform'
+    }
+  };
+}
+
+export function validateCorrectionProviderOutput(value) {
+  const base = validateProviderOutput(value);
+  const errors = [...base.errors, ...findForbiddenProviderFields(value)];
+
+  if (value?.related_carousel?.length) {
+    errors.push('related_carousel_must_be_platform_owned');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors: [...new Set(errors)]
+  };
+}
+
 export const CORRECTION_REQUEST_VERSION = 1;
 
 export function createCorrectionRequest({
