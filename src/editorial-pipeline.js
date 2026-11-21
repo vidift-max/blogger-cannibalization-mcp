@@ -53,7 +53,15 @@ export function prepareEditorialPipeline({
         ],
         allowed_block_types: [...CONTENT_BLOCK_TYPES],
         allowed_interaction_types: [...INTERACTION_TYPES],
-        related_carousel: 'platform_selected'
+        related_carousel: 'platform_selected',
+        provider_must_not_supply: ['related_carousel', 'html', 'css', 'javascript'],
+        normalization: {
+          trim_text_fields: true,
+          discard_empty_blocks: true,
+          discard_unsupported_blocks_when_valid_blocks_exist: true,
+          max_interactions: 4,
+          carousel_input: 'forbidden_platform_owned'
+        }
       }
     },
     provider_policy: {
