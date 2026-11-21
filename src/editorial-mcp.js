@@ -3,7 +3,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod';
 import { buildEditorialBrief } from './editorial-brief.js';
 import { query } from './db.js';
-import { isEditorialMcpConfigured, authorizeEditorialMcpRequest, syncAgeSeconds } from './editorial-mcp-auth.js';
+import { isEditorialMcpConfigured, isEditorialMcpMethodAllowed, authorizeEditorialMcpRequest, syncAgeSeconds } from './editorial-mcp-auth.js';
 
 async function loadCorpus(blogId) {
   const blog = await query(
@@ -110,7 +110,7 @@ function createServer() {
 }
 
 export async function handleEditorialMcp(req, res) {
-  if (req.method !== 'POST') {
+  if (!isEditorialMcpMethodAllowed(req.method)) {
     res.setHeader('Allow', 'POST');
     res.status(405).json({ error: 'method_not_allowed' });
     return;
