@@ -498,7 +498,7 @@ function comparePosts(a, b) {
 
   } else if (
     score >= 0.48 &&
-    (enoughSharedTerms || hasSharedPhrase)
+    (enoughSharedTerms || hasSharedPhrase || headingSimilarity >= 0.8)
   ) {
 
     classification = 'possivel_conflito';
