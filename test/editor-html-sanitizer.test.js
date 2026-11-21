@@ -62,13 +62,25 @@ test('sanitizer rejects whitespace-obfuscated and non-web URL schemes', () => {
 
 test('sanitizer rejects tabs, newlines, and control characters in URLs', () => {
   const html = sanitizeWithNodes([
-    element('a', [text('tab')], { href: 'java\tscript:alert(1)' }),
-    element('a', [text('newline')], { href: 'java\nscript:alert(1)' }),
-    element('a', [text('carriage return')], { href: 'java\rscript:alert(1)' }),
+    element('a', [text('tab')], { href: 'java	script:alert(1)' }),
+    element('a', [text('newline')], { href: 'java
+script:alert(1)' }),
+    element('a', [text('carriage return')], { href: 'javascript:alert(1)' }),
     element('a', [text('control')], { href: 'https://example.com/\u0007path' }),
     element('a', [text('valid')], { href: 'https://example.com/path' })
   ]);
   assert.equal(html, 'tabnewlinecarriage returncontrol<a href="https://example.com/path">valid</a>');
+});
+
+test('sanitizer rejects malformed protocol prefixes and URL-like obfuscation', () => {
+  const html = sanitizeWithNodes([
+    element('a', [text('encoded')], { href: 'java%73cript:alert(1)' }),
+    element('a', [text('colon')], { href: 'java\u003Ascript:alert(1)' }),
+    element('a', [text('fragment')], { href: '#javascript:alert(1)' }),
+    element('a', [text('relative path')], { href: '/javascript:alert(1)' }),
+    element('a', [text('mailto')], { href: 'mailto:test@example.com' })
+  ]);
+  assert.equal(html, 'encodedcolonfragmentrelative path<a href="mailto:test@example.com">mailto</a>');
 });
 
 test('sanitizer unwraps unknown formatting but removes dangerous embedded subtrees', () => {
