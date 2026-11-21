@@ -797,10 +797,11 @@ router.post(
         }
       }
 
-      const articles = r.rows.map(p => ({
+      const articles = corpusRows.map(p => ({
         id: p.id,
         title: p.title,
         url: p.url,
+        document_type: p.document_type,
         content_html: p.content_html || '',
         problems:
           problemsByPost.get(String(p.id)) || []
@@ -830,6 +831,8 @@ router.post(
 
       res.json({
         posts: r.rowCount,
+        pages: pageRows.rowCount,
+        corpus: corpusRows.length,
         findings,
         articles,
         note:
