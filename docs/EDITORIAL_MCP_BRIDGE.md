@@ -80,3 +80,8 @@ The application-side bridge therefore must be reported as:
 9. The platform validates, interprets, and assembles the final article using its own architecture.
 
 GPT-6 is therefore an editorial intelligence layer, not the owner of the Claude prompt or final HTML architecture.
+
+
+## Freshness signal
+
+The `get_editorial_brief` response includes `sync_age_seconds` alongside `synced_at`. GPT-6 should treat this as evidence of corpus freshness, not as proof that Blogger is continuously monitored. If freshness is too old for the editorial task, the platform must synchronize the blog before relying on the brief.
