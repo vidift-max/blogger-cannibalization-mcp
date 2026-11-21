@@ -58,3 +58,17 @@ test('remote operator cannot publish without explicit user approval', async () =
   assert.throws(() => grantPublishCapability(session), /explicit_user_approval_required/);
   assert.equal(canOperatorPublish(session), false);
 });
+
+
+test('corrupted current workflow state is rejected without mutation', () => {
+  const workspace = createContentWorkspace({ title: 'Estado corrompido' });
+  workspace.workflow.state = 'unknown';
+  workspace.workflow.publication_allowed = true;
+  const before = { ...workspace.workflow };
+
+  assert.throws(
+    () => transitionWorkspace(workspace, 'approved'),
+    /invalid_current_workspace_state/
+  );
+  assert.deepEqual(workspace.workflow, before);
+});
