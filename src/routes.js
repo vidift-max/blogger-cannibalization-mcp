@@ -747,7 +747,30 @@ router.post(
         }
       }
 
-      const findings = analyzePosts(r.rows);
+      const pageRows = await query(
+        `SELECT
+          pg.id,
+          pg.title,
+          pg.url,
+          pg.content_html,
+          pg.content_text
+         FROM pages pg
+         JOIN blogs b ON b.id=pg.blog_id
+         WHERE pg.blog_id=$1
+           AND pg.user_id=$2
+           AND b.user_id=$2`,
+        [
+          req.params.blogId,
+          req.user.id
+        ]
+      );
+
+      const corpusRows = [
+        ...r.rows.map(row => ({ ...row, document_type: 'article' })),
+        ...pageRows.rows.map(row => ({ ...row, document_type: 'page' }))
+      ];
+
+      const findings = analyzePosts(corpusRows);
 
       const problemsByPost = new Map(
         r.rows.map(p => [String(p.id), []])
