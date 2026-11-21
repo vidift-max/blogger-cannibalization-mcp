@@ -10,3 +10,5 @@ test('editor page exposes contextual content tools and approval gate', () => {
   assert.match(html, /disabled/);
   assert.match(html, /Aguardando revisão e aprovação/);
 });
+
+test('editor persists and restores the structured workspace locally',()=>{assert.match(html,/localStorage\.setItem\(STORAGE_KEY,JSON\.stringify\(state\.workspace\)/);assert.match(html,/localStorage\.getItem\(STORAGE_KEY\)/);assert.match(html,/hydrateWorkspace\(loadWorkspace\(\)\)/);});
