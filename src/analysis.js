@@ -232,6 +232,23 @@ function intentGroups(tokens) {
 }
 
 
+function summarizeFinding(finding) {
+  return {
+    issue_type: finding.issue_type || null,
+    risk: finding.risk || null,
+    score: finding.score || 0,
+    evidence: {
+      shared_terms: finding.shared_terms || [],
+      shared_phrases: finding.shared_phrases || [],
+      shared_topics: finding.shared_topics || [],
+      intent_a: finding.intent_a || null,
+      intent_b: finding.intent_b || null,
+      heading_similarity: finding.heading_similarity || 0,
+      body_similarity: finding.body_similarity || 0
+    }
+  };
+}
+
 function classifySearchIntent(tokens) {
   const groups = intentGroups(tokens).map(item => item.index);
   if (groups.includes(4)) return 'informational_how_to';
@@ -624,7 +641,10 @@ export function analyzePosts(posts) {
   }
 
 
-  return findings.sort(
-    (a, b) => b.score - a.score
-  );
+  return findings
+    .sort((a, b) => b.score - a.score)
+    .map(finding => ({
+      ...finding,
+      evidence: summarizeFinding(finding).evidence
+    }));
       }
