@@ -52,3 +52,16 @@ test('preserva metadados editoriais sem aceitar HTML de fornecedor', () => {
   assert.equal(out.article.summary, 'Resumo');
   assert.equal(out.article.target_query, 'consulta alvo');
 });
+
+
+test('normalizer rejects provider-selected related carousel items', () => {
+  const result = normalizeProviderArticle({
+    article: { title: 'Teste' },
+    blocks: [{ type: 'paragraph', content: 'Texto' }],
+    interactions: [],
+    related_carousel: [{ id: 'post-2', url: 'https://example.com/post-2' }]
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.errors, ['related_carousel_must_be_platform_owned']);
+});
