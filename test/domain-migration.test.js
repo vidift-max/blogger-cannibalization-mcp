@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { replaceDomainInHtml, replaceDomainInText, planDomainMigration } from '../src/domain-migration.js';
+import { replaceDomainInHtml, replaceDomainInText, planDomainMigration, planThemeMigration } from '../src/domain-migration.js';
 
 test('replaces old domain in link and image URL attributes', () => {
   const result = replaceDomainInHtml('<a href="https://old.example.com/post">Post</a><img src="https://www.old.example.com/img.jpg">', 'old.example.com', 'new.example.com');
@@ -32,4 +32,15 @@ test('creates a migration plan with original content and counts', () => {
   assert.equal(plan[1].changed, false);
   assert.equal(plan[1].replacements, 0);
   assert.equal(plan[0].original_content_html.includes('old.example.com'), true);
+});
+
+
+test('creates a theme migration plan and preserves the original theme', () => {
+  const theme = '<a href="https://old.example.com/home">Home</a><script>const x = "https://other.example.com";</script>';
+  const plan = planThemeMigration(theme, 'old.example.com', 'new.example.com');
+  assert.equal(plan.changed, true);
+  assert.equal(plan.replacements, 1);
+  assert.equal(plan.original_theme_html, theme);
+  assert.match(plan.theme_html, /https:\/\/new\.example\.com\/home/);
+  assert.match(plan.theme_html, /https:\/\/other\.example\.com/);
 });
