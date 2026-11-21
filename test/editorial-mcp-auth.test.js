@@ -65,4 +65,9 @@ test('MCP freshness reports elapsed synchronization age', () => {
     10
   );
   assert.equal(syncAgeSeconds(null, now), null);
+  assert.equal(syncAgeSeconds('not-a-date', now), null);
+  assert.equal(
+    syncAgeSeconds('2026-11-20T22:00:20Z', now),
+    null
+  );
 });
