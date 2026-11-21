@@ -54,7 +54,7 @@ function renderNode(node) {
  * Converts untrusted editor markup to a small semantic allowlist.
  * All attributes are discarded except validated http(s)/mailto links.
  */
-export function sanitizeEditorHtml(html, { parseHtml = defaultParseHtml } = {}) {
-  const root = parseHtml(String(html ?? ''));
+export function sanitizeEditorHtml(html) {
+  const root = defaultParseHtml(String(html ?? ''));
   return Array.from(root.childNodes || []).map(renderNode).join('');
 }
