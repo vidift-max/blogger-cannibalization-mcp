@@ -73,3 +73,8 @@ The analysis endpoint reports article count, page count and total corpus size.
 O corpus sincronizado de artigos e páginas pode ser consultado por uma busca editorial autenticada em `/blogs/:blogId/editorial-context?q=...`. A plataforma retorna apenas um subconjunto relevante, com título, URL, tipo de documento, termos coincidentes e pequeno trecho. O campo `synced_at` informa a data da última sincronização conhecida.
 
 Esse endpoint é uma camada de preparação para a futura ponte de consulta do GPT-6. Ele não concede publicação nem alteração no Blogger e não substitui a análise completa de canibalização.
+
+
+### Brief editorial para nova notícia
+
+A rota `/blogs/:blogId/editorial-brief?q=...&title=...` combina o subconjunto relevante do corpus com os achados de análise de canibalização. O resultado inclui documentos relevantes, conflitos de intenção/tópico, tópicos já ocupados e IDs de documentos classificados como HIGH. Essa camada serve para orientar o ângulo de uma nova notícia; não transforma similaridade em prova de disputa no Google.
