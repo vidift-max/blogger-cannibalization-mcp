@@ -772,14 +772,14 @@ router.post(
 
       const findings = analyzePosts(corpusRows);
 
-      const problemsByPost = new Map(
-        r.rows.map(p => [String(p.id), []])
+      const problemsByDocument = new Map(
+        corpusRows.map(p => [String(p.id), []])
       );
 
       for (const f of findings) {
         for (const p of f.posts || []) {
           const target =
-            problemsByPost.get(String(p.id));
+            problemsByDocument.get(String(p.id));
 
           if (target) {
             target.push({
