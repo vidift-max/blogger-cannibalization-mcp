@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createContentWorkspace } from '../src/content-workspace.js';
-import { serializeWorkspace, deserializeWorkspace, saveWorkspace, loadWorkspace, clearWorkspace } from '../src/editor-workspace-storage.js';
+import { serializeWorkspace, deserializeWorkspace, saveWorkspace, loadWorkspace, clearWorkspace, DEFAULT_WORKSPACE_STORAGE_KEY } from '../src/editor-workspace-storage.js';
 
 test('workspace storage round-trips editorial data without operator session',()=>{
   const workspace=createContentWorkspace({title:'Teste',contentHtml:'<p>Conteúdo</p>',metadata:{labels:['seo']}});
@@ -28,3 +28,6 @@ test('storage adapter saves, loads and clears workspace',()=>{
   clearWorkspace(storage);
   assert.equal(loadWorkspace(storage),null);
 });
+
+
+test('storage adapter supports an explicit namespaced key',()=>{const map=new Map();const storage={setItem:(k,v)=>map.set(k,v),getItem:k=>map.get(k)||null,removeItem:k=>map.delete(k)};const workspace=createContentWorkspace({title:'Namespace'});saveWorkspace(workspace,storage,'bsi:article');assert.equal(map.has('bsi:article'),true);assert.equal(map.has(DEFAULT_WORKSPACE_STORAGE_KEY),false);assert.equal(loadWorkspace(storage,'bsi:article').document.title,'Namespace');clearWorkspace(storage,'bsi:article');assert.equal(loadWorkspace(storage,'bsi:article'),null);});
