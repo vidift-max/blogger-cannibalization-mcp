@@ -78,3 +78,26 @@ test('page and article drafts persist independently through import, reload and c
   assert.equal(canPublishWorkspace(restoredArticle), false);
   assert.equal(canPublishWorkspace(restoredPage), false);
 });
+
+
+test('invalid or empty Claude HTML never replaces an existing saved draft', () => {
+  const storage = createMemoryStorage();
+  const key = getWorkspaceStorageKey('article');
+  const original = importClaudeHtmlToWorkspace('<h1>Rascunho preservado</h1><p>Conteúdo válido.</p>');
+  assert.equal(original.ok, true);
+  saveWorkspace(original.workspace, storage, key);
+  const before = storage.getItem(key);
+
+  for (const invalidHtml of ['', '   ', '<h1>Sem scripts</h1><script>alert(1)</script>', '<h1 style="color:red">CSS não permitido</h1>']) {
+    const rejected = importClaudeHtmlToWorkspace(invalidHtml);
+    assert.equal(rejected.ok, false);
+    assert.ok(Array.isArray(rejected.errors));
+    assert.equal(storage.getItem(key), before);
+  }
+
+  const restored = loadWorkspace(storage, key);
+  assert.equal(restored.document.title, 'Rascunho preservado');
+  assert.equal(restored.document.content_html, '<p>Conteúdo válido.</p>');
+  assert.equal(restored.workflow.state, 'draft');
+  assert.equal(canPublishWorkspace(restored), false);
+});
