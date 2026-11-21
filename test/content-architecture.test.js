@@ -7,6 +7,7 @@ import {
   CONTENT_BLOCK_TYPES,
   INTERACTION_TYPES,
   createArticleContract,
+  createCorrectionRequest,
   validateProviderOutput
 } from '../src/content-architecture.js';
 
@@ -81,7 +82,6 @@ test('createArticleContract carries only context needed by the assembly pipeline
 
 
 test('cria briefing de correção sem expor arquitetura da plataforma', () => {
-  const { createCorrectionRequest } = await import('../src/content-architecture.js');
   const request = createCorrectionRequest({
     document: { id: 7, document_type: 'article', title: 'Original', url: 'https://example.com/a' },
     findings: [{ issue_type: 'topic_overlap_review', risk: 'MEDIUM', score: 0.5, recommendation: 'revisar intenção' }]
