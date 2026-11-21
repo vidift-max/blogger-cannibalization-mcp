@@ -60,8 +60,9 @@ test('preserva tipo de documento e classifica o conflito', () => {
 
 test('não confunde termos de tópicos por substring', () => {
   const out = analyzePosts([
-    { id: 1, title: 'Bankruptcy options for families', content_text: 'How to evaluate bankruptcy and debt relief options' },
-    { id: 2, title: 'Best banking accounts', content_text: 'Checking and savings accounts for families' }
+    { id: 1, title: 'Debt options for families', content_text: 'Bankruptcy, debt relief and household debt options for families' },
+    { id: 2, title: 'Debt options for families', content_text: 'Banking accounts, checking accounts and household debt options for families' }
   ]);
-  if (out.length > 0) assert.ok(!out[0].shared_topics.includes('banking'));
+  assert.ok(out.length > 0);
+  assert.ok(!out[0].shared_topics.includes('banking'));
 });
