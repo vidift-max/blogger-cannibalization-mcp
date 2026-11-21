@@ -25,6 +25,7 @@ import { analyzePosts } from './analysis.js';
 import { normalizeBloggerDocument } from './blogger-content.js';
 import { countChangedSections } from './diff-count.js';
 import { createCorrectionRequest } from './content-architecture.js';
+import { selectEditorialContext } from './editorial-context.js';
 
 export const router = express.Router();
 
@@ -1030,6 +1031,75 @@ router.get(
             postsResult.rowCount
         }
       );
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+
+/*
+ * ============================================================
+ * CONTEXTO EDITORIAL PARA GPT-6
+ * ============================================================
+ * Retorna somente o subconjunto relevante do corpus sincronizado.
+ * Não publica nem altera o Blogger.
+ */
+
+router.get(
+  '/blogs/:blogId/editorial-context',
+  currentUser,
+  async (req, res, next) => {
+    try {
+      const q = String(req.query.q || '').trim();
+
+      if (!q) {
+        return res.status(400).json({ error: 'query_required' });
+      }
+
+      const blog = await query(
+        `SELECT id, name, url, synced_at
+         FROM blogs
+         WHERE id=$1 AND user_id=$2`,
+        [req.params.blogId, req.user.id]
+      );
+
+      if (!blog.rowCount) {
+        return res.status(404).json({ error: 'blog_not_found' });
+      }
+
+      const posts = await query(
+        `SELECT id,title,url,content_text,labels
+         FROM posts
+         WHERE blog_id=$1 AND user_id=$2`,
+        [req.params.blogId, req.user.id]
+      );
+
+      const pages = await query(
+        `SELECT id,title,url,content_text
+         FROM pages
+         WHERE blog_id=$1 AND user_id=$2`,
+        [req.params.blogId, req.user.id]
+      );
+
+      const corpus = [
+        ...posts.rows.map(row => ({ ...row, document_type: 'article' })),
+        ...pages.rows.map(row => ({ ...row, document_type: 'page', labels: [] }))
+      ];
+
+      const context = selectEditorialContext(
+        corpus,
+        q,
+        req.query.limit
+      );
+
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({
+        query: q,
+        synced_at: blog.rows[0].synced_at,
+        corpus_size: corpus.length,
+        context
+      });
     } catch (e) {
       next(e);
     }
