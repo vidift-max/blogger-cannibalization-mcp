@@ -106,3 +106,14 @@ export function transitionWorkspace(workspace, nextState) {
   workspace.workflow.publication_allowed = nextState === 'approved';
   return workspace;
 }
+
+export function updateWorkspaceDocument(workspace, { title, contentHtml } = {}) {
+  if (!workspace || !workspace.document) throw new Error('workspace_required');
+  if (title !== undefined) workspace.document.title = String(title);
+  if (contentHtml !== undefined) workspace.document.content_html = String(contentHtml);
+  if (workspace.workflow?.state !== 'draft') {
+    workspace.workflow.state = 'draft';
+    workspace.workflow.publication_allowed = false;
+  }
+  return workspace;
+}
