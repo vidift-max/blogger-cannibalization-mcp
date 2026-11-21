@@ -40,6 +40,10 @@ export function authorizeEditorialMcpRequest(req, env = process.env) {
   );
 }
 
+export function isEditorialCorpusSafeForDecisions(status) {
+  return status === 'fresh';
+}
+
 export function editorialUseWarning(status) {
   if (status === 'fresh') return null;
   if (status === 'stale') {
