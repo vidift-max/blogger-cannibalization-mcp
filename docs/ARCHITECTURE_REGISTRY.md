@@ -66,3 +66,10 @@ Findings preserve both document types so an article competing with a landing/pag
 can be reviewed as one SEO relationship instead of two isolated datasets.
 
 The analysis endpoint reports article count, page count and total corpus size.
+
+
+## Contexto editorial consultável
+
+O corpus sincronizado de artigos e páginas pode ser consultado por uma busca editorial autenticada em `/blogs/:blogId/editorial-context?q=...`. A plataforma retorna apenas um subconjunto relevante, com título, URL, tipo de documento, termos coincidentes e pequeno trecho. O campo `synced_at` informa a data da última sincronização conhecida.
+
+Esse endpoint é uma camada de preparação para a futura ponte de consulta do GPT-6. Ele não concede publicação nem alteração no Blogger e não substitui a análise completa de canibalização.
