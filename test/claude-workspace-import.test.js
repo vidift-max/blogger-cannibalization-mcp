@@ -16,7 +16,6 @@ test('manual Claude HTML becomes a draft workspace without publication permissio
   assert.equal(result.workspace.import.source, 'claude_html_manual');
 });
 
-
 test('HTML-looking entities from Claude remain inert text after import', () => {
   const result = importClaudeHtmlToWorkspace(
     '<h1>Teste</h1><p>&lt;img src=x onerror=alert(1)&gt; &amp; texto</p>'
@@ -24,7 +23,8 @@ test('HTML-looking entities from Claude remain inert text after import', () => {
 
   assert.equal(result.ok, true);
   assert.match(result.workspace.document.content_html, /&lt;img src=x onerror=alert\(1\)&gt;/);
-  assert.doesNotMatch(result.workspace.document.content_html, /<img\b|onerror=/i);
+  assert.match(result.workspace.document.content_html, /<p>[^<]*&lt;img[^<]*&gt;/i);
+  assert.doesNotMatch(result.workspace.document.content_html, /<img\b/i);
 });
 
 test('normalized text cannot inject attributes or active elements into workspace HTML', () => {
@@ -33,6 +33,8 @@ test('normalized text cannot inject attributes or active elements into workspace
   );
 
   assert.equal(result.ok, true);
-  assert.doesNotMatch(result.workspace.document.content_html, /<script\b|onclick=/i);
   assert.match(result.workspace.document.content_html, /&lt;script&gt;/);
+  assert.match(result.workspace.document.content_html, /onclick=/i);
+  assert.doesNotMatch(result.workspace.document.content_html, /<script\b/i);
+  assert.doesNotMatch(result.workspace.document.content_html, /<p[^>]+onclick=/i);
 });
