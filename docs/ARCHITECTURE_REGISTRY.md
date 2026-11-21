@@ -41,3 +41,19 @@ The final assembly pipeline should be:
 8. run SEO/cannibalization checks;
 9. preview;
 10. require approval before publishing.
+
+## Cannibalization analysis contract
+
+The analysis layer is evidence-first. It may identify candidate conflicts using title,
+content, labels, headings, topic groups and search-intent signals, but it must not
+declare a definitive Google ranking conflict without external performance evidence.
+
+Each finding should expose the evidence and distinguish:
+- likely same search intent;
+- distinct search intent;
+- shared main topic;
+- different main topics;
+- structural/content overlap.
+
+Search Console or equivalent query/page performance data remains the preferred
+confirmation source before consolidation, redirect or deletion decisions.
