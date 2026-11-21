@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
 import { buildEditorialBrief } from './editorial-brief.js';
-import { isEditorialMcpConfigured, isEditorialMcpMethodAllowed, isEditorialMcpOriginAllowed, authorizeEditorialMcpRequest, syncAgeSeconds, syncFreshness } from './editorial-mcp-auth.js';
+import { isEditorialMcpConfigured, isEditorialMcpMethodAllowed, isEditorialMcpOriginAllowed, authorizeEditorialMcpRequest, syncAgeSeconds, syncFreshness, editorialUseWarning } from './editorial-mcp-auth.js';
 
 async function loadCorpus(blogId) {
   const { query } = await import('./db.js');
@@ -100,11 +100,7 @@ function createServer() {
                 synced_at: blog.synced_at,
                 sync_age_seconds: syncAgeSeconds(blog.synced_at),
                 corpus_freshness: freshness,
-                editorial_use_warning: freshness.status === 'fresh'
-                  ? null
-                  : freshness.status === 'stale'
-                    ? 'Corpus is stale. Verify existing Blogger content before relying on this brief or choosing a new angle.'
-                    : 'Corpus freshness is unknown. Synchronize Blogger content before relying on this brief or making cannibalization decisions.',
+                editorial_use_warning: editorialUseWarning(freshness.status),
                 corpus_size: corpus.length,
                 brief
               },
