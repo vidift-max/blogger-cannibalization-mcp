@@ -158,6 +158,8 @@ export async function handleEditorialMcp(req, res) {
 export async function getEditorialMcpConfig() {
   return {
     configured: isEditorialMcpConfigured(),
-    blog_id: process.env.MCP_EDITORIAL_BLOG_ID || null
+    blog_id: process.env.MCP_EDITORIAL_BLOG_ID || null,
+    allowed_origin_count: String(process.env.MCP_EDITORIAL_ALLOWED_ORIGINS || '')
+      .split(',').map(value => value.trim()).filter(Boolean).length
   };
 }
