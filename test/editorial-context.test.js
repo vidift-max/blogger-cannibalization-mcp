@@ -41,3 +41,34 @@ test('limita a quantidade de contexto retornado', () => {
   const result = selectEditorialContext(corpus, 'inflação', 3);
   assert.equal(result.length, 3);
 });
+
+test('ignora palavras comuns em inglês e português na seleção editorial', () => {
+  const corpus = [
+    {
+      id: 1,
+      title: 'Credit score changes',
+      content_text: 'Credit score rules for families.'
+    },
+    {
+      id: 2,
+      title: 'Home cooking ideas',
+      content_text: 'New ideas for your home and family.'
+    }
+  ];
+
+  const result = selectEditorialContext(
+    corpus,
+    'what changed with the new rules for your family'
+  );
+
+  assert.deepEqual(result.map(item => item.id), []);
+});
+
+test('consulta formada apenas por palavras comuns não seleciona documentos', () => {
+  const corpus = [
+    { id: 1, title: 'Banking rules', content_text: 'Checking accounts and savings.' }
+  ];
+
+  const result = selectEditorialContext(corpus, 'what is this for you and your');
+  assert.deepEqual(result, []);
+});
