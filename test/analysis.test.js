@@ -16,3 +16,12 @@ test('não sinaliza artigos sem relação textual', () => {
   ]);
   assert.equal(out.length, 0);
 });
+
+test('labels ajudam a sustentar a relação temática sem decidir sozinhas', () => {
+  const out = analyzePosts([
+    { id: 1, title: 'Guia de contas digitais', labels: ['banking', 'students'], content_text: 'Como escolher uma conta para estudantes' },
+    { id: 2, title: 'Melhores contas digitais para estudantes', labels: ['banking', 'students'], content_text: 'Comparação de contas e tarifas para estudantes' }
+  ]);
+  assert.ok(out.length > 0);
+  assert.ok(out[0].shared_topics.includes('banking'));
+});
