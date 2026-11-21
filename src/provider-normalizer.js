@@ -10,6 +10,10 @@ import { normalizeInteractions } from './interaction-catalog.js';
 export function normalizeProviderArticle(value) {
   const validation = validateProviderOutput(value);
 
+  if (Array.isArray(value?.related_carousel) && value.related_carousel.length > 0) {
+    return { ok: false, errors: ['related_carousel_must_be_platform_owned'] };
+  }
+
   const hasValidBlock = Array.isArray(value.blocks) && value.blocks.some(block =>
     block && CONTENT_BLOCK_TYPES.includes(block.type)
   );
