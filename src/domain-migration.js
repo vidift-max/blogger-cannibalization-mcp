@@ -56,6 +56,17 @@ export function replaceDomainInText(text, oldDomainInput, newDomainInput) {
   return { text: result, replacements };
 }
 
+export function planThemeMigration(themeHtml, oldDomain, newDomain) {
+  const source = String(themeHtml || '');
+  const result = replaceDomainInText(source, oldDomain, newDomain);
+  return {
+    original_theme_html: source,
+    theme_html: result.text,
+    replacements: result.replacements,
+    changed: result.text !== source
+  };
+}
+
 export function planDomainMigration(documents, oldDomain, newDomain) {
   return documents.map(document => {
     const source = String(document.content_html || '');
