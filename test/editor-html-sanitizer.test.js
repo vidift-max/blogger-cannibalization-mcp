@@ -47,7 +47,18 @@ test('sanitizer rejects whitespace-obfuscated and non-web URL schemes', () => {
     element('a', [text('relative')], { href: '//evil.example/path' }),
     element('a', [text('uppercase safe')], { href: 'HTTPS://example.com/safe' })
   ]) });
-  assert.equal(html, 'javascriptdatavbscriptrelative<a href="HTTPS://example.com/safe">uppercase safe</a>');
+  assert.equal(html, 'javascriptdatavbscriptrelative<a href="https://example.com/safe">uppercase safe</a>');
+});
+
+test('sanitizer rejects tabs, newlines, and control characters in URLs', () => {
+  const html = sanitizeEditorHtml('', { parseHtml: parseFixture([
+    element('a', [text('tab')], { href: 'java\\tscript:alert(1)' }),
+    element('a', [text('newline')], { href: 'java\\nscript:alert(1)' }),
+    element('a', [text('carriage return')], { href: 'java\\rscript:alert(1)' }),
+    element('a', [text('control')], { href: 'https://example.com/\\u0007path' }),
+    element('a', [text('valid')], { href: 'https://example.com/path' })
+  ]) });
+  assert.equal(html, 'tabnewlinecarriage returncontrol<a href="https://example.com/path">valid</a>');
 });
 
 test('sanitizer unwraps unknown formatting but removes dangerous embedded subtrees', () => {
