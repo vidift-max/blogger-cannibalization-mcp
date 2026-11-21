@@ -44,3 +44,10 @@ test('creates a theme migration plan and preserves the original theme', () => {
   assert.match(plan.theme_html, /https:\/\/new\.example\.com\/home/);
   assert.match(plan.theme_html, /https:\/\/other\.example\.com/);
 });
+
+
+test('replaces protocol-relative old-domain URLs while preserving the path', () => {
+  const result = replaceDomainInText('//www.old.example.com/a?q=1#top', 'old.example.com', 'new.example.com');
+  assert.equal(result.replacements, 1);
+  assert.equal(result.text, 'https://new.example.com/a?q=1#top');
+});
