@@ -3,6 +3,16 @@ import assert from 'node:assert/strict';
 import { createContentWorkspace } from '../src/content-workspace.js';
 import { serializeWorkspace, deserializeWorkspace, saveWorkspace, loadWorkspace, clearWorkspace, DEFAULT_WORKSPACE_STORAGE_KEY, getWorkspaceStorageKey } from '../src/editor-workspace-storage.js';
 
+function createMemoryStorage() {
+  const map = new Map();
+  return {
+    map,
+    setItem: (key, value) => map.set(key, value),
+    getItem: key => map.get(key) ?? null,
+    removeItem: key => map.delete(key)
+  };
+}
+
 test('workspace storage round-trips editorial data without operator session',()=>{
   const workspace=createContentWorkspace({title:'Teste',contentHtml:'<p>Conteúdo</p>',metadata:{labels:['seo']}});
   workspace.operator={user_approved:true,capabilities:['publish_approved_content']};
@@ -20,8 +30,7 @@ test('invalid stored workspace is rejected',()=>{
 });
 
 test('storage adapter saves, loads and clears workspace',()=>{
-  const map=new Map();
-  const storage={setItem:(k,v)=>map.set(k,v),getItem:k=>map.get(k)||null,removeItem:k=>map.delete(k)};
+  const storage=createMemoryStorage();
   const workspace=createContentWorkspace({title:'Persistido'});
   saveWorkspace(workspace,storage);
   assert.equal(loadWorkspace(storage).document.title,'Persistido');
@@ -30,12 +39,11 @@ test('storage adapter saves, loads and clears workspace',()=>{
 });
 
 test('storage adapter supports an explicit namespaced key',()=>{
-  const map=new Map();
-  const storage={setItem:(k,v)=>map.set(k,v),getItem:k=>map.get(k)||null,removeItem:k=>map.delete(k)};
+  const storage=createMemoryStorage();
   const workspace=createContentWorkspace({title:'Namespace'});
   saveWorkspace(workspace,storage,'bsi:article');
-  assert.equal(map.has('bsi:article'),true);
-  assert.equal(map.has(DEFAULT_WORKSPACE_STORAGE_KEY),false);
+  assert.equal(storage.map.has('bsi:article'),true);
+  assert.equal(storage.map.has(DEFAULT_WORKSPACE_STORAGE_KEY),false);
   assert.equal(loadWorkspace(storage,'bsi:article').document.title,'Namespace');
   clearWorkspace(storage,'bsi:article');
   assert.equal(loadWorkspace(storage,'bsi:article'),null);
@@ -61,10 +69,18 @@ test('article and page workspaces use isolated storage keys',()=>{
   assert.equal(pageKey,'bsi:content-workspace:page');
   assert.notEqual(articleKey,pageKey);
   assert.throws(()=>getWorkspaceStorageKey('comment'),/invalid_document_type/);
-  const map=new Map();
-  const storage={setItem:(k,v)=>map.set(k,v),getItem:k=>map.get(k)||null,removeItem:k=>map.delete(k)};
+  const storage=createMemoryStorage();
   saveWorkspace(createContentWorkspace({documentType:'article',title:'Artigo'}),storage,articleKey);
   saveWorkspace(createContentWorkspace({documentType:'page',title:'Página'}),storage,pageKey);
   assert.equal(loadWorkspace(storage,articleKey).document.title,'Artigo');
   assert.equal(loadWorkspace(storage,pageKey).document.title,'Página');
+  clearWorkspace(storage,articleKey);
+  assert.equal(loadWorkspace(storage,articleKey),null);
+  assert.equal(loadWorkspace(storage,pageKey).document.title,'Página');
+});
+
+test('storage adapter reports unavailable storage operations',()=>{
+  assert.throws(()=>saveWorkspace(createContentWorkspace(),null),/storage_required/);
+  assert.throws(()=>loadWorkspace(null),/storage_required/);
+  assert.throws(()=>clearWorkspace({},'workspace'),/storage_required/);
 });
