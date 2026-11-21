@@ -6,7 +6,8 @@ import {
   isEditorialMcpOriginAllowed,
   isEditorialMcpMethodAllowed,
   authorizeEditorialMcpRequest,
-  syncAgeSeconds
+  syncAgeSeconds,
+  syncFreshness
 } from '../src/editorial-mcp-auth.js';
 
 const env = {
@@ -69,5 +70,27 @@ test('MCP freshness reports elapsed synchronization age', () => {
   assert.equal(
     syncAgeSeconds('2026-11-20T22:00:20Z', now),
     null
+  );
+});
+
+
+test('MCP corpus freshness distinguishes fresh, stale and unknown sync state', () => {
+  const now = Date.parse('2026-11-20T22:00:10Z');
+
+  assert.deepEqual(
+    syncFreshness('2026-11-20T22:00:00Z', now, 60),
+    { status: 'fresh', max_age_seconds: 60 }
+  );
+  assert.deepEqual(
+    syncFreshness('2026-11-20T21:58:00Z', now, 60),
+    { status: 'stale', max_age_seconds: 60 }
+  );
+  assert.deepEqual(
+    syncFreshness(null, now, 60),
+    { status: 'unknown', max_age_seconds: 60 }
+  );
+  assert.deepEqual(
+    syncFreshness('2026-11-20T22:00:00Z', now, 'invalid'),
+    { status: 'fresh', max_age_seconds: 86400 }
   );
 });
