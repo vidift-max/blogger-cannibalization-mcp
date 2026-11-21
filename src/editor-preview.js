@@ -1,3 +1,5 @@
+import { sanitizeEditorHtml } from './editor-html-sanitizer.js';
+
 /* Build an isolated preview document for untrusted editor HTML. */
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({
@@ -5,9 +7,9 @@ function escapeHtml(value) {
   })[char]);
 }
 
-export function createSandboxedPreviewDocument({ title = '', contentHtml = '' } = {}) {
+export function createSandboxedPreviewDocument({ title = '', contentHtml = '', sanitizeHtml = sanitizeEditorHtml } = {}) {
   const safeTitle = escapeHtml(title);
-  const content = String(contentHtml ?? '');
+  const content = sanitizeHtml(String(contentHtml ?? ''));
   return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
     '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; style-src \'unsafe-inline\'; form-action \'none\'; base-uri \'none\'">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
