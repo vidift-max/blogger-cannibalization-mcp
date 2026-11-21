@@ -64,5 +64,6 @@ test('não confunde termos de tópicos por substring', () => {
     { id: 2, title: 'Debt options for families', content_text: 'Banking accounts, checking accounts and household debt options for families' }
   ]);
   assert.ok(out.length > 0);
+  assert.ok(out[0].shared_topics.includes('debt'));
   assert.ok(!out[0].shared_topics.includes('banking'));
 });
