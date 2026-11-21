@@ -112,3 +112,35 @@ test('failed persistence operations surface errors and do not claim a successful
   assert.throws(() => clearWorkspace(failingStorage), /storage_write_denied/);
   assert.equal(workspace.document.title, 'Não perder');
 });
+
+
+test('restoring an approved workspace does not restore operator authorization', async () => {
+  const { transitionWorkspace, canPublishWorkspace } = await import('../src/content-workspace.js');
+  const { createOperatorSession, canOperatorPublish } = await import('../src/operator-capabilities.js');
+  const storage = createMemoryStorage();
+  const workspace = createContentWorkspace({ title: 'Aprovação salva' });
+  transitionWorkspace(workspace, 'review');
+  transitionWorkspace(workspace, 'preview');
+  transitionWorkspace(workspace, 'approved');
+  saveWorkspace(workspace, storage, getWorkspaceStorageKey('article'));
+
+  const restored = loadWorkspace(storage, getWorkspaceStorageKey('article'));
+  const newRemoteSession = createOperatorSession({ remote: true });
+
+  assert.equal(restored.workflow.state, 'approved');
+  assert.equal(canPublishWorkspace(restored), true);
+  assert.equal('operator' in restored, false);
+  assert.equal(canOperatorPublish(newRemoteSession), false);
+  assert.equal(newRemoteSession.capabilities.publish.length, 0);
+});
+
+test('storage snapshot never serializes approval credentials or operator capabilities', () => {
+  const workspace = createContentWorkspace({ title: 'Sem credenciais' });
+  workspace.operator = {
+    user_approved: true,
+    capabilities: { publish: ['publish_approved_content'] },
+    session_token: 'do-not-persist'
+  };
+  const raw = serializeWorkspace(workspace);
+  assert.doesNotMatch(raw, /user_approved|publish_approved_content|session_token|do-not-persist/);
+});
