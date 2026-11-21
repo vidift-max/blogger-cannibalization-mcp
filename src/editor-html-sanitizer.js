@@ -23,7 +23,7 @@ function safeHref(value) {
   const candidate = String(value ?? '');
   // Reject ASCII control characters rather than relying on URL parser
   // normalization (which can erase tabs/newlines inside a scheme).
-  if (!candidate || /[\\u0000-\\u0020\\u007f]/.test(candidate)) return '';
+  if (!candidate || /[\u0000-\u0020\u007f]/.test(candidate)) return '';
   try {
     const parsed = new URL(candidate);
     if (!['https:', 'http:', 'mailto:'].includes(parsed.protocol)) return '';
