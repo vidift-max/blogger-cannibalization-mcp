@@ -39,7 +39,7 @@ test('sanitizer keeps only safe links and removes unsafe URL schemes', () => {
   assert.equal(html, '<a href="https://example.com/path">safe</a>unsafe');
 });
 
-test('sanitizer rejects encoded, whitespace-obfuscated, and non-web URL schemes', () => {
+test('sanitizer rejects whitespace-obfuscated and non-web URL schemes', () => {
   const html = sanitizeEditorHtml('', { parseHtml: parseFixture([
     element('a', [text('javascript')], { href: ' javascript:alert(1)' }),
     element('a', [text('data')], { href: 'data:text/html,<script>alert(1)</script>' }),
