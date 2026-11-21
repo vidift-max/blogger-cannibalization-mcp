@@ -89,6 +89,9 @@ export function transitionWorkspace(workspace, nextState) {
   }
 
   const current = workspace.workflow.state;
+  if (!CONTENT_WORKSPACE_STATES.includes(current)) {
+    throw new Error('invalid_current_workspace_state');
+  }
 
   const allowed = {
     draft: ['review'],
