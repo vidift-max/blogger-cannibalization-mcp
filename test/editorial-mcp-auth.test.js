@@ -71,6 +71,13 @@ test('MCP bearer authorization accepts only the configured token', () => {
   const missing = { headers: {} };
 
   assert.equal(authorizeEditorialMcpRequest(good, env), true);
+  assert.equal(authorizeEditorialMcpRequest(good, {
+    ...env,
+    MCP_EDITORIAL_TOKEN: '  editorial-secret  '
+  }), true);
+  assert.equal(authorizeEditorialMcpRequest({
+    headers: { authorization: 'Bearer  editorial-secret  ' }
+  }, env), false);
   assert.equal(authorizeEditorialMcpRequest({
     headers: { authorization: 'bearer editorial-secret' }
   }, env), true);
