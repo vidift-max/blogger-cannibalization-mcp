@@ -5,7 +5,8 @@ import {
   CONTENT_WORKSPACE_SECTIONS,
   canPublishWorkspace,
   createContentWorkspace,
-  transitionWorkspace
+  transitionWorkspace,
+  updateWorkspaceDocument
 } from '../src/content-workspace.js';
 
 test('workspace separates content, metadata and SEO tools by document context', () => {
