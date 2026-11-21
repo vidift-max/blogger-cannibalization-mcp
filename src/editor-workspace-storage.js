@@ -32,17 +32,19 @@ export function deserializeWorkspace(raw) {
   }
 }
 
-export function saveWorkspace(workspace, storage) {
+export const DEFAULT_WORKSPACE_STORAGE_KEY = 'workspace';
+
+export function saveWorkspace(workspace, storage, key = DEFAULT_WORKSPACE_STORAGE_KEY) {
   if (!storage || typeof storage.setItem !== 'function') throw new Error('storage_required');
-  storage.setItem('workspace', serializeWorkspace(workspace));
+  storage.setItem(key, serializeWorkspace(workspace));
 }
 
-export function loadWorkspace(storage) {
+export function loadWorkspace(storage, key = DEFAULT_WORKSPACE_STORAGE_KEY) {
   if (!storage || typeof storage.getItem !== 'function') throw new Error('storage_required');
-  return deserializeWorkspace(storage.getItem('workspace'));
+  return deserializeWorkspace(storage.getItem(key));
 }
 
-export function clearWorkspace(storage) {
+export function clearWorkspace(storage, key = DEFAULT_WORKSPACE_STORAGE_KEY) {
   if (!storage || typeof storage.removeItem !== 'function') throw new Error('storage_required');
-  storage.removeItem('workspace');
+  storage.removeItem(key);
 }
