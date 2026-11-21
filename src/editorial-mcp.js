@@ -137,7 +137,8 @@ export async function handleEditorialMcp(req, res) {
   }
 
   const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined
+    sessionIdGenerator: undefined,
+    enableJsonResponse: true
   });
 
   res.on('close', () => {
