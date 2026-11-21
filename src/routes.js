@@ -597,6 +597,7 @@ router.post(
         await client.query('BEGIN');
 
         for (const p of posts) {
+          const normalized = normalizeBloggerDocument(p);
           await client.query(
             `INSERT INTO posts(
               user_id,
@@ -625,13 +626,13 @@ router.post(
             [
               req.user.id,
               owned.rows[0].id,
-              p.blogger_post_id,
-              p.title,
-              p.url,
-              p.content_html,
-              stripHtml(p.content_html),
-              p.labels,
-              p.updated_at
+              normalized.source_id,
+              normalized.title,
+              normalized.url,
+              normalized.content_html,
+              normalized.content_text,
+              normalized.labels,
+              normalized.updated_at
             ]
           );
         }
