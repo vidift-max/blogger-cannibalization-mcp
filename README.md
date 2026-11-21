@@ -32,3 +32,17 @@ Esta é uma reconstrução alpha corrigida, não a versão original que a ferram
 - O algoritmo de similaridade não comprova canibalização; integrar Search Console e análise de intenção de busca antes de decisões automáticas.
 
 Nunca publique alterações automaticamente. Nunca coloque `.env`, tokens, client secret ou chave de criptografia no GitHub.
+
+## Ponte MCP editorial (somente leitura)
+
+A ponte `POST /mcp` disponibiliza a ferramenta `get_editorial_brief`, que consulta artigos e páginas já sincronizados do blog configurado. Ela não altera nem publica conteúdo no Blogger.
+
+Para habilitá-la, configure no ambiente do servidor:
+- `MCP_EDITORIAL_TOKEN`: segredo Bearer forte e exclusivo.
+- `MCP_EDITORIAL_BLOG_ID`: ID interno do blog autorizado.
+- `MCP_EDITORIAL_ALLOWED_ORIGINS`: origens de navegador permitidas, separadas por vírgula (opcional; requisições sem cabeçalho Origin não são bloqueadas por esta regra).
+- `MCP_EDITORIAL_MAX_SYNC_AGE_SECONDS`: idade máxima do corpus em segundos; padrão `86400` (24 horas). Valor `0` exige sincronização no mesmo segundo.
+
+A resposta inclui `synced_at`, `sync_age_seconds` e `corpus_freshness.status` (`fresh`, `stale` ou `unknown`). Um corpus `stale` ou `unknown` deve ser tratado como contexto insuficiente para decisões editoriais até uma nova sincronização confirmada.
+
+Mantenha o token apenas nas variáveis secretas do ambiente de execução. Não o coloque no repositório, em prompts públicos, logs ou no navegador. A inclusão dessas variáveis em `.env.example` serve apenas como documentação; deixá-las vazias mantém a ponte desabilitada.
