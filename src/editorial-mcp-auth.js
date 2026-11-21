@@ -32,10 +32,11 @@ export function authorizeEditorialMcpRequest(req, env = process.env) {
   if (!match) return false;
 
   const presented = match[1];
+  const configuredToken = env.MCP_EDITORIAL_TOKEN.trim();
 
   return safeEqual(
     sha256(presented),
-    sha256(env.MCP_EDITORIAL_TOKEN)
+    sha256(configuredToken)
   );
 }
 
