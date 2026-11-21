@@ -28,7 +28,9 @@ export function normalizeProviderArticle(value) {
       title: String(value.article?.title || '').trim(),
       meta_description: String(value.article?.meta_description || '').trim(),
       primary_topic: String(value.article?.primary_topic || '').trim(),
-      search_intent: String(value.article?.search_intent || '').trim()
+      search_intent: String(value.article?.search_intent || '').trim(),
+      summary: String(value.article?.summary || '').trim(),
+      target_query: String(value.article?.target_query || '').trim()
     },
     blocks,
     interactions: normalizeInteractions(value.interactions),
