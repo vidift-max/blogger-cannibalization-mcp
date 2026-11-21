@@ -512,6 +512,13 @@ function comparePosts(a, b) {
 
     risk,
 
+    issue_type:
+      classification === 'canibalizacao_provavel'
+        ? 'search_intent_conflict'
+        : classification === 'possivel_conflito'
+          ? 'topic_overlap_review'
+          : null,
+
     shared_terms: sharedTerms.slice(0, 15),
 
     shared_phrases: shared.slice(0, 10),
