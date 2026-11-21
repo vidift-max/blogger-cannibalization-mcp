@@ -81,6 +81,11 @@ function createServer() {
         sourceTitle: title || '',
         limit: 12
       });
+      const freshness = syncFreshness(
+        blog.synced_at,
+        Date.now(),
+        process.env.MCP_EDITORIAL_MAX_SYNC_AGE_SECONDS ?? 86400
+      );
 
       return {
         content: [
@@ -94,11 +99,12 @@ function createServer() {
                 },
                 synced_at: blog.synced_at,
                 sync_age_seconds: syncAgeSeconds(blog.synced_at),
-                corpus_freshness: syncFreshness(
-                  blog.synced_at,
-                  Date.now(),
-                  process.env.MCP_EDITORIAL_MAX_SYNC_AGE_SECONDS ?? 86400
-                ),
+                corpus_freshness: freshness,
+                editorial_use_warning: freshness.status === 'fresh'
+                  ? null
+                  : freshness.status === 'stale'
+                    ? 'Corpus is stale. Verify existing Blogger content before relying on this brief or choosing a new angle.'
+                    : 'Corpus freshness is unknown. Synchronize Blogger content before relying on this brief or making cannibalization decisions.',
                 corpus_size: corpus.length,
                 brief
               },
