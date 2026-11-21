@@ -48,6 +48,12 @@ async function loadCorpus(blogId) {
   };
 }
 
+function syncAgeSeconds(syncedAt) {
+  if (!syncedAt) return null;
+  const ms = Date.now() - new Date(syncedAt).getTime();
+  return Number.isFinite(ms) ? Math.max(0, Math.floor(ms / 1000)) : null;
+}
+
 function createServer() {
   const server = new McpServer(
     {
@@ -93,6 +99,7 @@ function createServer() {
                   url: blog.url
                 },
                 synced_at: blog.synced_at,
+                sync_age_seconds: syncAgeSeconds(blog.synced_at),
                 corpus_size: corpus.length,
                 brief
               },
