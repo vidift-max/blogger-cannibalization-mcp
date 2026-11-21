@@ -166,3 +166,45 @@ export function validateProviderOutput(value) {
     errors
   };
 }
+
+
+export const CORRECTION_REQUEST_VERSION = 1;
+
+export function createCorrectionRequest({
+  document,
+  findings = [],
+  relatedCandidates = [],
+  preserveStructure = true
+} = {}) {
+  return {
+    version: CORRECTION_REQUEST_VERSION,
+    document: {
+      id: document?.id ?? null,
+      type: document?.document_type || 'article',
+      title: String(document?.title || ''),
+      url: String(document?.url || '')
+    },
+    objective: 'corrigir problemas editoriais e SEO sem receber ou alterar a arquitetura HTML/CSS/JS da plataforma',
+    preserve_structure: Boolean(preserveStructure),
+    findings: findings.map(f => ({
+      issue_type: f.issue_type || null,
+      risk: f.risk || null,
+      score: Number(f.score || 0),
+      recommendation: f.recommendation || '',
+      related_document: f.relatedArticle
+        ? {
+            id: f.relatedArticle.id ?? null,
+            type: f.relatedArticle.document_type || 'article',
+            title: f.relatedArticle.title || '',
+            url: f.relatedArticle.url || ''
+          }
+        : null
+    })),
+    related_candidates: relatedCandidates.map(item => ({
+      id: item.id ?? null,
+      title: item.title || '',
+      topic: item.primary_topic || '',
+      search_intent: item.search_intent || ''
+    }))
+  };
+}
