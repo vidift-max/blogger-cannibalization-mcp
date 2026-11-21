@@ -97,7 +97,7 @@ function createServer() {
                 corpus_freshness: syncFreshness(
                   blog.synced_at,
                   Date.now(),
-                  process.env.MCP_EDITORIAL_MAX_SYNC_AGE_SECONDS || 86400
+                  process.env.MCP_EDITORIAL_MAX_SYNC_AGE_SECONDS ?? 86400
                 ),
                 corpus_size: corpus.length,
                 brief
