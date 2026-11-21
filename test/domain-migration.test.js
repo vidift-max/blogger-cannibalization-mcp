@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { replaceDomainInHtml, replaceDomainInText, planDomainMigration, planThemeMigration, summarizeDomainMigration } from '../src/domain-migration.js';
+import { replaceDomainInHtml, replaceDomainInText, planDomainMigration, planThemeMigration, summarizeDomainMigration, createDomainMigrationPlan } from '../src/domain-migration.js';
 
 test('replaces old domain in link and image URL attributes', () => {
   const result = replaceDomainInHtml('<a href="https://old.example.com/post">Post</a><img src="https://www.old.example.com/img.jpg">', 'old.example.com', 'new.example.com');
@@ -34,7 +34,6 @@ test('creates a migration plan with original content and counts', () => {
   assert.equal(plan[0].original_content_html.includes('old.example.com'), true);
 });
 
-
 test('creates a theme migration plan and preserves the original theme', () => {
   const theme = '<a href="https://old.example.com/home">Home</a><script>const x = "https://other.example.com";</script>';
   const plan = planThemeMigration(theme, 'old.example.com', 'new.example.com');
@@ -45,13 +44,11 @@ test('creates a theme migration plan and preserves the original theme', () => {
   assert.match(plan.theme_html, /https:\/\/other\.example\.com/);
 });
 
-
 test('replaces protocol-relative old-domain URLs while preserving the path', () => {
   const result = replaceDomainInText('//www.old.example.com/a?q=1#top', 'old.example.com', 'new.example.com');
   assert.equal(result.replacements, 1);
   assert.equal(result.text, 'https://new.example.com/a?q=1#top');
 });
-
 
 test('summarizes article, page and theme migration counts', () => {
   const documents = planDomainMigration([
@@ -65,7 +62,6 @@ test('summarizes article, page and theme migration counts', () => {
     theme_changed: true, theme_replacements: 1, total_replacements: 3
   });
 });
-
 
 test('creates a non-approved aggregate plan with originals and summary', () => {
   const plan = createDomainMigrationPlan(
