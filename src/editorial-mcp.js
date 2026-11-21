@@ -48,7 +48,7 @@ async function loadCorpus(blogId) {
   };
 }
 
-function syncAgeSeconds(syncedAt) {
+export function syncAgeSeconds(syncedAt) {
   if (!syncedAt) return null;
   const ms = Date.now() - new Date(syncedAt).getTime();
   return Number.isFinite(ms) ? Math.max(0, Math.floor(ms / 1000)) : null;
