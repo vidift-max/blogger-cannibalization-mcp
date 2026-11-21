@@ -65,3 +65,26 @@ test('summarizes article, page and theme migration counts', () => {
     theme_changed: true, theme_replacements: 1, total_replacements: 3
   });
 });
+
+
+test('creates a non-approved aggregate plan with originals and summary', () => {
+  const plan = createDomainMigrationPlan(
+    [{ type: 'article', source_id: '1', content_html: '<a href="https://old.example.com/a">A</a>' }],
+    '<a href="https://old.example.com/theme">T</a>',
+    'old.example.com',
+    'new.example.com'
+  );
+  assert.equal(plan.approved, false);
+  assert.equal(plan.old_domain, 'old.example.com');
+  assert.equal(plan.new_domain, 'new.example.com');
+  assert.equal(plan.summary.total_replacements, 2);
+  assert.equal(plan.documents[0].original_content_html.includes('old.example.com'), true);
+  assert.equal(plan.theme.original_theme_html.includes('old.example.com'), true);
+});
+
+test('rejects a migration when old and new domains are equal', () => {
+  assert.throws(
+    () => createDomainMigrationPlan([], '', 'old.example.com', 'old.example.com'),
+    /devem ser diferentes/
+  );
+});
