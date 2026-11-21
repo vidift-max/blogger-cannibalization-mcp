@@ -6,6 +6,7 @@ import {
   isEditorialMcpOriginAllowed,
   isEditorialMcpMethodAllowed,
   authorizeEditorialMcpRequest,
+  editorialUseWarning,
   syncAgeSeconds,
   syncFreshness
 } from '../src/editorial-mcp-auth.js';
@@ -144,4 +145,11 @@ test('MCP corpus freshness distinguishes fresh, stale and unknown sync state', (
     syncFreshness('2026-11-20T22:00:09Z', now, '0'),
     { status: 'stale', max_age_seconds: 0 }
   );
+});
+
+test('editorial use warning follows corpus freshness status', () => {
+  assert.equal(editorialUseWarning('fresh'), null);
+  assert.match(editorialUseWarning('stale'), /Corpus is stale/);
+  assert.match(editorialUseWarning('unknown'), /freshness is unknown/);
+  assert.match(editorialUseWarning('unexpected'), /freshness is unknown/);
 });
