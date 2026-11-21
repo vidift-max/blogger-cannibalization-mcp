@@ -449,6 +449,10 @@ function comparePosts(a, b) {
     topicDiff;
 
 
+  if (headingSimilarity >= 0.8 && bodySimilarity >= 0.3) {
+    score = Math.max(score, 0.48);
+  }
+
   score = Math.max(0, Math.min(1, score));
 
 
