@@ -8,6 +8,8 @@ import {
   INTERACTION_TYPES,
   createArticleContract,
   createCorrectionRequest,
+  createCorrectionProviderInput,
+  validateCorrectionProviderOutput,
   validateProviderOutput
 } from '../src/content-architecture.js';
 
@@ -90,4 +92,44 @@ test('cria briefing de correção sem expor arquitetura da plataforma', () => {
   assert.equal(request.preserve_structure, true);
   assert.equal(request.objective.includes('HTML/CSS/JS'), true);
   assert.equal(Object.prototype.hasOwnProperty.call(request, 'html'), false);
+});
+
+
+test('cria entrada Claude somente com contexto editorial relevante', () => {
+  const input = createCorrectionProviderInput({
+    objective: 'corrigir intenção e conteúdo',
+    preserve_structure: true,
+    document: { id: 7, title: 'Original' },
+    findings: [{ issue_type: 'search_intent_conflict' }]
+  }, {
+    relevantContext: [{ id: 8, title: 'Relacionado', summary: 'contexto' }]
+  });
+
+  assert.equal(input.version, 1);
+  assert.equal(input.document.id, 7);
+  assert.equal(input.relevant_context.length, 1);
+  assert.equal(input.constraints.html_allowed, false);
+  assert.equal(input.constraints.javascript_allowed, false);
+  assert.equal(input.constraints.carousel_urls_selected_by, 'platform');
+  assert.equal(Object.prototype.hasOwnProperty.call(input, 'html'), false);
+});
+
+test('aceita saída Claude estruturada e rejeita arquitetura', () => {
+  const valid = validateCorrectionProviderOutput({
+    article: { title: 'Novo título' },
+    blocks: [{ type: 'paragraph', content: 'Texto editorial.' }],
+    interactions: []
+  });
+
+  assert.equal(valid.valid, true);
+
+  const invalid = validateCorrectionProviderOutput({
+    article: { title: 'Novo título' },
+    blocks: [{ type: 'paragraph', content: '<div>HTML indevido</div>' }],
+    interactions: [{ type: 'calculator', title: 'X', javascript: 'alert(1)' }]
+  });
+
+  assert.equal(invalid.valid, false);
+  assert.ok(invalid.errors.some(error => error.includes('implementation_markup_forbidden')));
+  assert.ok(invalid.errors.includes('interaction_javascript_forbidden'));
 });
