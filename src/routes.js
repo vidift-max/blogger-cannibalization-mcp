@@ -636,8 +636,41 @@ router.post(
           );
         }
 
-        await client.query(
-          `UPDATE blogs
+        for (const p of pages) {
+          const normalized = normalizeBloggerDocument(p);
+          await client.query(
+            `INSERT INTO pages(
+              user_id,
+              blog_id,
+              blogger_page_id,
+              title,
+              url,
+              content_html,
+              content_text,
+              updated_at
+            )
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+            ON CONFLICT(user_id, blog_id, blogger_page_id)
+            DO UPDATE SET
+              title=EXCLUDED.title,
+              url=EXCLUDED.url,
+              content_html=EXCLUDED.content_html,
+              content_text=EXCLUDED.content_text,
+              updated_at=EXCLUDED.updated_at`,
+            [
+              req.user.id,
+              owned.rows[0].id,
+              normalized.source_id,
+              normalized.title,
+              normalized.url,
+              normalized.content_html,
+              normalized.content_text,
+              normalized.updated_at
+            ]
+          );
+        }
+
+
            SET synced_at=now()
            WHERE id=$1 AND user_id=$2`,
           [
