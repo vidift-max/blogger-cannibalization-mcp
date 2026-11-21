@@ -38,3 +38,24 @@ test('sanitizer keeps only safe links and removes unsafe URL schemes', () => {
   ]) });
   assert.equal(html, '<a href="https://example.com/path">safe</a>unsafe');
 });
+
+test('sanitizer rejects encoded, whitespace-obfuscated, and non-web URL schemes', () => {
+  const html = sanitizeEditorHtml('', { parseHtml: parseFixture([
+    element('a', [text('javascript')], { href: ' javascript:alert(1)' }),
+    element('a', [text('data')], { href: 'data:text/html,<script>alert(1)</script>' }),
+    element('a', [text('vbscript')], { href: 'vbscript:msgbox(1)' }),
+    element('a', [text('relative')], { href: '//evil.example/path' }),
+    element('a', [text('uppercase safe')], { href: 'HTTPS://example.com/safe' })
+  ]) });
+  assert.equal(html, 'javascriptdatavbscriptrelative<a href="HTTPS://example.com/safe">uppercase safe</a>');
+});
+
+test('sanitizer unwraps unknown formatting but removes dangerous embedded subtrees', () => {
+  const html = sanitizeEditorHtml('', { parseHtml: parseFixture([
+    element('div', [element('span', [text('conteúdo')]), element('img', [], { src: 'https://example.com/x.png' })]),
+    element('math', [element('mtext', [text('não renderizar')])]),
+    element('template', [element('p', [text('não renderizar')])]),
+    element('p', [text('fim')])
+  ]) });
+  assert.equal(html, 'conteúdo<p>fim</p>');
+});
