@@ -22,6 +22,7 @@ import {
   updatePost
 } from './blogger.js';
 import { analyzePosts } from './analysis.js';
+import { normalizeBloggerDocument } from './blogger-content.js';
 import { countChangedSections } from './diff-count.js';
 
 export const router = express.Router();
