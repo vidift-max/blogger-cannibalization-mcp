@@ -95,3 +95,15 @@ test('reconhece APY, HSA e planos 529 como termos financeiros curtos', () => {
   assert.deepEqual(result.map(item => item.id), [1]);
   assert.deepEqual(new Set(result[0].matched_terms), new Set(['529', 'hsa', 'apy']));
 });
+
+
+test('prioriza documentos que cobrem mais termos da consulta', () => {
+  const result = selectEditorialContext([
+    { id: 1, title: 'IRS rules explained', content_text: 'Tax filing details.' },
+    { id: 2, title: 'Retirement account guidance', content_text: 'IRS rules for IRA contributions.' }
+  ], 'IRS IRA');
+
+  assert.equal(result[0].id, 2);
+  assert.equal(result[0].query_coverage, 1);
+  assert.equal(result[1].query_coverage, 0.5);
+});
