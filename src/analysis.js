@@ -360,7 +360,7 @@ function topicDifference(topicInfo) {
 
 function extractHeadings(html = '') {
   const headings = [];
-  const re = /<h([1-6])[^>]*>([\\s\\S]*?)<\\/h\\1>/gi;
+  const re = /<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi;
   let match;
   while ((match = re.exec(String(html)))) {
     const text = normalize(match[2]);
