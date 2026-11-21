@@ -84,3 +84,14 @@ test('preserva siglas financeiras curtas na seleção editorial', () => {
   assert.ok(result[0].matched_terms.includes('irs'));
   assert.ok(result[0].matched_terms.includes('ira'));
 });
+
+
+test('reconhece APY, HSA e planos 529 como termos financeiros curtos', () => {
+  const result = selectEditorialContext([
+    { id: 1, title: '529 plan and HSA tax benefits', content_text: 'Compare APY options for savings.' },
+    { id: 2, title: 'Tax filing checklist', content_text: 'Documents for annual filing.' }
+  ], '529 HSA APY');
+
+  assert.deepEqual(result.map(item => item.id), [1]);
+  assert.deepEqual(new Set(result[0].matched_terms), new Set(['529', 'hsa', 'apy']));
+});
