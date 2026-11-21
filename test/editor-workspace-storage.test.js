@@ -84,3 +84,31 @@ test('storage adapter reports unavailable storage operations',()=>{
   assert.throws(()=>loadWorkspace(null),/storage_required/);
   assert.throws(()=>clearWorkspace({},'workspace'),/storage_required/);
 });
+
+
+test('corrupt saved data is treated as invalid while storage access failures remain distinguishable', () => {
+  const corruptStorage = {
+    getItem: () => '{"version":1,"document":{"type":"article"}}'
+  };
+  assert.equal(loadWorkspace(corruptStorage, 'bsi:content-workspace:article'), null);
+
+  const unavailableStorage = {
+    getItem: () => { throw new Error('storage_access_denied'); }
+  };
+  assert.throws(
+    () => loadWorkspace(unavailableStorage, 'bsi:content-workspace:article'),
+    /storage_access_denied/
+  );
+});
+
+test('failed persistence operations surface errors and do not claim a successful save', () => {
+  const workspace = createContentWorkspace({ title: 'Não perder' });
+  const failingStorage = {
+    setItem: () => { throw new Error('quota_exceeded'); },
+    removeItem: () => { throw new Error('storage_write_denied'); }
+  };
+
+  assert.throws(() => saveWorkspace(workspace, failingStorage), /quota_exceeded/);
+  assert.throws(() => clearWorkspace(failingStorage), /storage_write_denied/);
+  assert.equal(workspace.document.title, 'Não perder');
+});
