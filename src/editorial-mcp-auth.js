@@ -28,7 +28,7 @@ export function authorizeEditorialMcpRequest(req, env = process.env) {
   if (!isEditorialMcpConfigured(env)) return false;
 
   const header = String(req.headers.authorization || '');
-  const match = /^Bearer ([^\\s]+)$/i.exec(header);
+  const match = /^Bearer ([^\s]+)$/i.exec(header);
   if (!match) return false;
 
   const presented = match[1];
