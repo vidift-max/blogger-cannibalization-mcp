@@ -57,3 +57,12 @@ Each finding should expose the evidence and distinguish:
 
 Search Console or equivalent query/page performance data remains the preferred
 confirmation source before consolidation, redirect or deletion decisions.
+
+## Unified SEO corpus
+
+Analysis runs operate on a single corpus containing Blogger posts and pages.
+Every document carries a stable local id, title, URL, content and document type.
+Findings preserve both document types so an article competing with a landing/page
+can be reviewed as one SEO relationship instead of two isolated datasets.
+
+The analysis endpoint reports article count, page count and total corpus size.
