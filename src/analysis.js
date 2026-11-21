@@ -232,6 +232,28 @@ function intentGroups(tokens) {
 }
 
 
+function classifySearchIntent(tokens) {
+  const groups = intentGroups(tokens).map(item => item.index);
+  if (groups.includes(4)) return 'informational_how_to';
+  if (groups.includes(3)) return 'commercial_comparison';
+  if (groups.includes(1)) return 'review';
+  if (groups.includes(2)) return 'transactional_price';
+  if (groups.includes(5)) return 'informational_evaluation';
+  if (groups.includes(0)) return 'informational_beginner';
+  return 'informational_general';
+}
+
+function intentRelation(titleA, titleB) {
+  const a = classifySearchIntent(titleA);
+  const b = classifySearchIntent(titleB);
+  return {
+    intent_a: a,
+    intent_b: b,
+    same_intent: a === b,
+    distinct_intent: a !== b
+  };
+}
+
 function intentDifference(a, b) {
   const A = intentGroups(a);
   const B = intentGroups(b);
@@ -362,6 +384,7 @@ function comparePosts(a, b) {
   const phraseEvidence = Math.min(shared.length / 2, 1);
 
   const difference = intentDifference(titleA, titleB);
+  const intentInfo = intentRelation(titleA, titleB);
 
   const topicInfo = compareTopics(
     `${a.title || ''} ${a.content_text || a.content_html || ''}`,
@@ -482,6 +505,18 @@ function comparePosts(a, b) {
 
     intent_difference:
       difference > 0,
+
+    intent_a:
+      intentInfo.intent_a,
+
+    intent_b:
+      intentInfo.intent_b,
+
+    same_intent:
+      intentInfo.same_intent,
+
+    distinct_intent:
+      intentInfo.distinct_intent,
 
     topic_difference:
       topicDiff > 0,
