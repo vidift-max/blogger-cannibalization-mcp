@@ -53,7 +53,7 @@ export function selectRelatedCarousel({
       const topicScore = overlap(article?.primary_topic, candidate.primary_topic);
       const sameIntentPenalty =
         article?.search_intent && candidate?.search_intent &&
-        article.search_intent === candidate.search_intent ? 0.12 : 0;
+        article.search_intent === candidate.search_intent ? 0.20 : 0;
 
       const labelScore = overlap(
         Array.isArray(article?.labels) ? article.labels.join(' ') : '',
