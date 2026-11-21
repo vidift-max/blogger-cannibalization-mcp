@@ -24,7 +24,7 @@ main{min-width:0;padding:24px}.card{background:#fff;border:1px solid #dadce0;bor
 <input class="title" id="title" placeholder="Título">
 <div class="content" id="content" contenteditable="true"><p>Comece a preparar o conteúdo aqui.</p></div><p class="muted" id="importStatus">Nenhum HTML do Claude importado.</p>
 </section>
-<section class="card"><h3>Metadados</h3><div id="articleOnly"><label class="muted">Labels<input class="field" placeholder="economia, finanças, ..."></label><br><label class="muted">Permalink<input class="field" placeholder="/novo-artigo"></label><br><label class="muted">Meta description<input class="field" placeholder="Descrição para mecanismos de busca"></label></div></section>
+<section class="card"><h3>Metadados</h3><div id="articleOnly"><label class="muted">Labels<input class="field" id="labels" placeholder="economia, finanças, ..."></label><br><label class="muted">Permalink<input class="field" id="permalink" placeholder="/novo-artigo"></label><br><label class="muted">Meta description<input class="field" id="metaDescription" placeholder="Descrição para mecanismos de busca"></label></div></section>
 </main>
 <aside class="side">
 <div class="tool"><span class="badge">RASCUNHO</span><p class="muted">O conteúdo pode ser preparado sem autorização de publicação.</p></div>
@@ -51,7 +51,9 @@ const state={workspace:null, documentType, operator:createOperatorSession({remot
 function syncEditorToWorkspace(){if(!state.workspace)return;updateWorkspaceDocument(state.workspace,{title:titleInput.value,contentHtml:document.getElementById('content').innerHTML});saveWorkspace();render();}
 function saveWorkspace(){if(state.workspace)localStorage.setItem(STORAGE_KEY,JSON.stringify(state.workspace));}
 function loadWorkspace(){try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return null;const workspace=JSON.parse(raw);if(!workspace||workspace.version!==1||!workspace.document||!workspace.workflow||!Array.isArray(workspace.sections))return null;return workspace;}catch(e){return null;}}
-function hydrateWorkspace(workspace){if(!workspace)return false;state.workspace=workspace;state.operator=createOperatorSession({remote:true});titleInput.value=workspace.document.title;document.getElementById('content').innerHTML=workspace.document.content_html||'<p>Sem blocos de conteúdo extraíveis.</p>';importStatus.textContent='Rascunho recuperado deste navegador; autorização de publicação não foi recuperada.';render();return true;}
+const labelsInput=document.getElementById('labels');const permalinkInput=document.getElementById('permalink');const metaDescriptionInput=document.getElementById('metaDescription');
+function syncMetadataToWorkspace(){if(!state.workspace)return;state.workspace.metadata.labels=labelsInput.value.split(',').map(v=>v.trim()).filter(Boolean);state.workspace.metadata.permalink=permalinkInput.value;state.workspace.metadata.meta_description=metaDescriptionInput.value;saveWorkspace();}
+function hydrateWorkspace(workspace){if(!workspace)return false;state.workspace=workspace;state.operator=createOperatorSession({remote:true});titleInput.value=workspace.document.title;document.getElementById('content').innerHTML=workspace.document.content_html||'<p>Sem blocos de conteúdo extraíveis.</p>';labelsInput.value=(workspace.metadata?.labels||[]).join(', ');permalinkInput.value=workspace.metadata?.permalink||'';metaDescriptionInput.value=workspace.metadata?.meta_description||'';importStatus.textContent='Rascunho recuperado deste navegador; autorização de publicação não foi recuperada.';render();return true;}
 const importButton=document.getElementById('importClaude');
 const importFile=document.getElementById('claudeHtml');
 const importStatus=document.getElementById('importStatus');
@@ -74,6 +76,7 @@ importFile.onchange=async()=> {
   render();
 };
 titleInput.addEventListener('input',syncEditorToWorkspace);
+labelsInput.addEventListener('input',syncMetadataToWorkspace);permalinkInput.addEventListener('input',syncMetadataToWorkspace);metaDescriptionInput.addEventListener('input',syncMetadataToWorkspace);
 document.getElementById('content').addEventListener('input',syncEditorToWorkspace);
 const publish=document.getElementById('publish');
 function render(){const workflow=state.workspace?.workflow?.state||'draft';const publicationAllowed=state.workspace ? canPublishWorkspace(state.workspace) : false;publish.disabled=workflow!=='approved' || !publicationAllowed || !canOperatorPublish(state.operator);publish.classList.toggle('blocked',publish.disabled);document.getElementById('approval').textContent=workflow==='approved'?'Aprovado — publicação liberada.':'Aguardando revisão e aprovação.';if(state.workspace) saveWorkspace();}
