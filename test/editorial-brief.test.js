@@ -45,7 +45,7 @@ test('lista apenas documentos relevantes entre os IDs de alto risco', () => {
     },
     {
       id: 11,
-      title: 'Mortgage refinance options and rates explained',
+      title: 'Mortgage refinance options and rates',
       content_text: 'A detailed guide to mortgage refinance options and rates.'
     }
   ];
