@@ -38,5 +38,7 @@ export function authorizeEditorialMcpRequest(req, env = process.env) {
 export function syncAgeSeconds(syncedAt, now = Date.now()) {
   if (!syncedAt) return null;
   const ms = now - new Date(syncedAt).getTime();
-  return Number.isFinite(ms) ? Math.max(0, Math.floor(ms / 1000)) : null;
+  return Number.isFinite(ms) && ms >= 0
+    ? Math.floor(ms / 1000)
+    : null;
 }
