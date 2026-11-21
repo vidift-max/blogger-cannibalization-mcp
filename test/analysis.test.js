@@ -56,3 +56,12 @@ test('preserva tipo de documento e classifica o conflito', () => {
   assert.equal(out[0].posts[1].document_type, 'page');
   assert.equal(out[0].issue_type, 'search_intent_conflict');
 });
+
+
+test('não confunde termos de tópicos por substring', () => {
+  const out = analyzePosts([
+    { id: 1, title: 'Bankruptcy options for families', content_text: 'How to evaluate bankruptcy and debt relief options' },
+    { id: 2, title: 'Best banking accounts', content_text: 'Checking and savings accounts for families' }
+  ]);
+  if (out.length > 0) assert.ok(!out[0].shared_topics.includes('banking'));
+});
