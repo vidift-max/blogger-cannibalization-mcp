@@ -24,6 +24,7 @@ import {
 import { analyzePosts } from './analysis.js';
 import { normalizeBloggerDocument } from './blogger-content.js';
 import { countChangedSections } from './diff-count.js';
+import { createCorrectionRequest } from './content-architecture.js';
 
 export const router = express.Router();
 
@@ -1041,6 +1042,50 @@ router.get(
  * CRIAÇÃO DE PROPOSTA INDIVIDUAL
  * ============================================================
  */
+
+router.get(
+  '/posts/:postId/correction-request',
+  currentUser,
+  async (req, res, next) => {
+    try {
+      const r = await query(
+        `SELECT
+          p.id, p.title, p.url
+         FROM posts p
+         WHERE p.id=$1 AND p.user_id=$2`,
+        [req.params.postId, req.user.id]
+      );
+
+      if (!r.rowCount) {
+        return res.status(404).json({ error: 'post_not_found' });
+      }
+
+      const analysis = await query(
+        `SELECT result
+         FROM analysis_runs
+         WHERE blog_id=(SELECT blog_id FROM posts WHERE id=$1 AND user_id=$2)
+           AND user_id=$2
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [req.params.postId, req.user.id]
+      );
+
+      const findings = analysis.rows[0]?.result?.findings || [];
+      const relevant = findings.filter(f =>
+        (f.posts || []).some(p => String(p.id) === String(req.params.postId))
+      );
+
+      const request = createCorrectionRequest({
+        document: { ...r.rows[0], document_type: 'article' },
+        findings: relevant
+      });
+
+      res.json({ request });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
 
 router.post(
   '/posts/:postId/proposals',
