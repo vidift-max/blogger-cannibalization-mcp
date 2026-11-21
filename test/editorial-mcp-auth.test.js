@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   isEditorialMcpConfigured,
+  isEditorialMcpMethodAllowed,
   authorizeEditorialMcpRequest,
   syncAgeSeconds
 } from '../src/editorial-mcp-auth.js';
@@ -11,6 +12,12 @@ const env = {
   MCP_EDITORIAL_TOKEN: 'editorial-secret',
   MCP_EDITORIAL_BLOG_ID: 'blog-123'
 };
+
+test('MCP endpoint allows only POST in stateless mode', () => {
+  assert.equal(isEditorialMcpMethodAllowed('POST'), true);
+  assert.equal(isEditorialMcpMethodAllowed('GET'), false);
+  assert.equal(isEditorialMcpMethodAllowed('DELETE'), false);
+});
 
 test('MCP configuration requires both token and scoped blog', () => {
   assert.equal(isEditorialMcpConfigured(env), true);
