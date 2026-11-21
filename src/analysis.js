@@ -341,6 +341,23 @@ function topicDifference(topicInfo) {
 }
 
 
+function extractHeadings(html = '') {
+  const headings = [];
+  const re = /<h([1-6])[^>]*>([\\s\\S]*?)<\\/h\\1>/gi;
+  let match;
+  while ((match = re.exec(String(html)))) {
+    const text = normalize(match[2]);
+    if (text) headings.push({ level: Number(match[1]), text });
+  }
+  return headings;
+}
+
+function headingOverlap(a, b) {
+  const A = uniqueWords(extractHeadings(a.content_html || '').map(x => x.text).join(' '));
+  const B = uniqueWords(extractHeadings(b.content_html || '').map(x => x.text).join(' '));
+  return jaccard(A, B);
+}
+
 function articleText(post) {
   return [
     post.title || '',
@@ -375,6 +392,7 @@ function comparePosts(a, b) {
    * a mesma intenção de busca.
    */
   const bodySimilarity = jaccard(bodyA, bodyB);
+  const headingSimilarity = headingOverlap(a, b);
 
   const titleEvidence = Math.max(
     titleSimilarity,
@@ -406,7 +424,8 @@ function comparePosts(a, b) {
    */
   let score =
     titleEvidence * 0.70 +
-    bodySimilarity * 0.12 +
+    bodySimilarity * 0.10 +
+    headingSimilarity * 0.10 +
     phraseEvidence * 0.18 -
     difference -
     topicDiff;
@@ -502,6 +521,9 @@ function comparePosts(a, b) {
 
     body_similarity:
       Number(bodySimilarity.toFixed(3)),
+
+    heading_similarity:
+      Number(headingSimilarity.toFixed(3)),
 
     intent_difference:
       difference > 0,
