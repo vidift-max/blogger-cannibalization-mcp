@@ -70,3 +70,18 @@ test('sanitizer unwraps unknown formatting but removes dangerous embedded subtre
   ]) });
   assert.equal(html, 'conteúdo<p>fim</p>');
 });
+test('sanitizer rejects foreign-namespace elements even when their tag names are allowed', () => {
+  const foreignParagraph = {
+    ...element('p', [text('foreign namespace must not become HTML')]),
+    namespaceURI: 'http://www.w3.org/2000/svg'
+  };
+  const htmlParagraph = {
+    ...element('p', [text('valid HTML')]),
+    namespaceURI: 'http://www.w3.org/1999/xhtml'
+  };
+  const html = sanitizeEditorHtml('', { parseHtml: parseFixture([
+    foreignParagraph,
+    htmlParagraph
+  ]) });
+  assert.equal(html, '<p>valid HTML</p>');
+});
