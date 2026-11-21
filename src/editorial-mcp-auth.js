@@ -1,5 +1,14 @@
 import { sha256, safeEqual } from './security.js';
 
+export function isEditorialMcpOriginAllowed(origin, env = process.env) {
+  if (!origin) return true;
+  const allowed = String(env.MCP_EDITORIAL_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+  return allowed.includes(origin);
+}
+
 export function isEditorialMcpMethodAllowed(method) {
   return String(method || '').toUpperCase() === 'POST';
 }
