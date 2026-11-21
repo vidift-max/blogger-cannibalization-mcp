@@ -6,6 +6,16 @@
 import { normalizeClaudeHtml } from './claude-html-normalizer.js';
 import { createContentWorkspace } from './content-workspace.js';
 
+function escapeHtmlText(value) {
+  return String(value ?? '').replace(/[&<>\"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '\"': '&quot;',
+    "'": '&#39;'
+  })[char]);
+}
+
 export function importClaudeHtmlToWorkspace(html, options = {}) {
   const normalized = normalizeClaudeHtml(html);
   if (!normalized.ok) return normalized;
@@ -24,7 +34,7 @@ export function importClaudeHtmlToWorkspace(html, options = {}) {
           : block.type === 'unordered_list' ? 'ul'
           : block.type === 'ordered_list' ? 'ol'
           : block.type === 'table' ? 'table' : 'div';
-        return `<${tag}>${block.content}</${tag}>`;
+        return `<${tag}>${escapeHtmlText(block.content)}</${tag}>`;
       }).join('\n'),
     metadata: options.metadata,
     seoIntelligence: options.seoIntelligence
