@@ -228,6 +228,14 @@
 <style>
 :root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#202124;background:#f8f9fa}
 *{box-sizing:border-box}body{margin:0}.topbar{height:64px;background:#fff;border-bottom:1px solid #dadce0;display:flex;align-items:center;gap:18px;padding:0 22px;position:sticky;top:0;z-index:5}.menu{font-size:22px;color:#5f6368}.brand{font-size:20px;min-width:220px}.search{flex:1;max-width:560px;background:#f1f3f4;border-radius:24px;padding:11px 18px;color:#5f6368}.back{color:#174ea6;text-decoration:none}.layout{display:grid;grid-template-columns:245px 1fr;min-height:calc(100vh - 64px)}.sidebar{background:#fff;border-right:1px solid #dadce0;padding:18px 12px}.nav{display:block;padding:11px 16px;border-radius:0 22px 22px 0;color:#3c4043;text-decoration:none;margin:2px 0}.nav:hover,.nav.active{background:#e8f0fe;color:#174ea6}.container{max-width:1100px;width:100%;margin:auto;padding:28px}.card{background:#fff;border:1px solid #dadce0;border-radius:12px;box-shadow:0 1px 2px rgba(60,64,67,.08)}button{border-radius:20px}.stats{gap:12px}.article{background:#fff}.status{border-radius:10px}@media(max-width:800px){.layout{grid-template-columns:1fr}.sidebar{display:none}.search{display:none}.brand{min-width:auto}.container{padding:16px}}
+</style><style>
+.analysis-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+.analysis-main{min-width:0}.analysis-side{position:sticky;top:82px}
+.analysis-side .card{padding:18px}.analysis-side h3{margin-top:0}
+.tool-item{padding:10px 0;border-bottom:1px solid #eee}.tool-item:last-child{border-bottom:0}
+.action-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.draft-badge{display:inline-block;padding:5px 10px;border-radius:16px;background:#fef7e0;color:#8a6116;font-size:12px;font-weight:600}
+@media(max-width:900px){.analysis-layout{grid-template-columns:1fr}.analysis-side{position:static}}
 </style></head>
 
 <body>
@@ -237,7 +245,7 @@
 <a class="nav" href="/">Artigos</a><a class="nav" href="#">Páginas</a><a class="nav active" href="/analysis.html">SEO Intelligence</a>
 <a class="nav" href="#">Estatísticas</a><a class="nav" href="#">Comentários</a><a class="nav" href="#">Categorias / Labels</a>
 <a class="nav" href="#">Migração de domínio</a><a class="nav" href="#">Tema</a><a class="nav" href="#">Configurações</a>
-</aside><main class="container">
+</aside><main class="container"><div class="analysis-layout"><section class="analysis-main">
 <div class="container">
 
   <header>
@@ -1676,6 +1684,12 @@
 })();
 </script>
 
-</main></div>
+</section><aside class="analysis-side">
+<div class="card"><span class="draft-badge">ANÁLISE — SEM PUBLICAÇÃO</span><h3>Próximas ações</h3>
+<div class="tool-item"><strong>1. Revisar</strong><br><span class="muted">Verifique os possíveis conflitos encontrados.</span></div>
+<div class="tool-item"><strong>2. Preparar conteúdo</strong><br><span class="muted">Leve o foco recomendado para a criação.</span></div>
+<div class="tool-item"><strong>3. Pré-visualizar</strong><br><span class="muted">Confira antes de qualquer aprovação.</span></div>
+<div class="action-row"><a class="back" href="/">← Voltar aos artigos</a></div></div>
+</aside></div></main></div>
 </body>
 </html>
