@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   isEditorialMcpConfigured,
+  isEditorialMcpOriginAllowed,
   isEditorialMcpMethodAllowed,
   authorizeEditorialMcpRequest,
   syncAgeSeconds
@@ -12,6 +13,18 @@ const env = {
   MCP_EDITORIAL_TOKEN: 'editorial-secret',
   MCP_EDITORIAL_BLOG_ID: 'blog-123'
 };
+
+test('MCP Origin policy rejects unlisted browser origins', () => {
+  assert.equal(isEditorialMcpOriginAllowed('', env), true);
+  assert.equal(isEditorialMcpOriginAllowed('https://allowed.example', {
+    ...env,
+    MCP_EDITORIAL_ALLOWED_ORIGINS: 'https://allowed.example'
+  }), true);
+  assert.equal(isEditorialMcpOriginAllowed('https://evil.example', {
+    ...env,
+    MCP_EDITORIAL_ALLOWED_ORIGINS: 'https://allowed.example'
+  }), false);
+});
 
 test('MCP endpoint allows only POST in stateless mode', () => {
   assert.equal(isEditorialMcpMethodAllowed('POST'), true);
