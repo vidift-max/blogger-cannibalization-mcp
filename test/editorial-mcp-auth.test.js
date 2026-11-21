@@ -43,6 +43,22 @@ test('MCP configuration requires both token and scoped blog', () => {
     isEditorialMcpConfigured({ MCP_EDITORIAL_BLOG_ID: 'blog-123' }),
     false
   );
+  assert.equal(
+    isEditorialMcpConfigured({ MCP_EDITORIAL_TOKEN: '', MCP_EDITORIAL_BLOG_ID: 'blog-123' }),
+    false
+  );
+  assert.equal(
+    isEditorialMcpConfigured({ MCP_EDITORIAL_TOKEN: '   ', MCP_EDITORIAL_BLOG_ID: 'blog-123' }),
+    false
+  );
+  assert.equal(
+    isEditorialMcpConfigured({ MCP_EDITORIAL_TOKEN: 'secret', MCP_EDITORIAL_BLOG_ID: '   ' }),
+    false
+  );
+  assert.equal(
+    isEditorialMcpConfigured({ MCP_EDITORIAL_TOKEN: 'secret', MCP_EDITORIAL_BLOG_ID: '' }),
+    false
+  );
 });
 
 test('MCP bearer authorization accepts only the configured token', () => {
