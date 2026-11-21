@@ -322,6 +322,7 @@ function topicDifference(topicInfo) {
 function articleText(post) {
   return [
     post.title || '',
+    Array.isArray(post.labels) ? post.labels.join(' ') : '',
     post.content_text || post.content_html || ''
   ].join(' ');
 }
