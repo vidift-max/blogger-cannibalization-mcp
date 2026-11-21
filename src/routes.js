@@ -581,6 +581,16 @@ router.post(
         owned.rows[0].blogger_blog_id
       );
 
+      const pages = await listPages(
+        auth,
+        owned.rows[0].blogger_blog_id
+      );
+
+      const corpus = [
+        ...posts.map(normalizeBloggerDocument),
+        ...pages.map(normalizeBloggerDocument)
+      ];
+
       const client = await pool.connect();
 
       try {
@@ -646,11 +656,14 @@ router.post(
 
       await audit(req.user.id, 'blog_synced', {
         blogId: owned.rows[0].id,
-        posts: posts.length
+        posts: posts.length,
+        pages: pages.length
       });
 
       res.json({
-        synced: posts.length
+        synced: posts.length,
+        pages: pages.length,
+        corpus: corpus.length
       });
     } catch (e) {
       next(e);
