@@ -19,10 +19,10 @@ main{min-width:0;padding:24px}.card{background:#fff;border:1px solid #dadce0;bor
 <a class="nav active" href="/editor.html">Artigos</a><a class="nav" href="#">Páginas</a><a class="nav" href="/analysis.html">SEO Intelligence</a><a class="nav" href="#">Estatísticas</a><a class="nav" href="#">Comentários</a><a class="nav" href="#">Categorias / Labels</a><a class="nav" href="#">Migração de domínio</a><a class="nav" href="#">Tema</a><a class="nav" href="#">Configurações</a>
 </aside>
 <main>
-<div class="card"><div class="actions"><button class="btn secondary" id="draft">Rascunho</button><button class="btn secondary" id="preview">Pré-visualizar</button><button class="btn publish blocked" id="publish" disabled>Publicar</button></div></div>
+<div class="card"><div class="actions"><button class="btn secondary" id="draft">Rascunho</button><button class="btn secondary" id="importClaude">Importar HTML do Claude</button><input id="claudeHtml" type="file" accept=".html,.htm,text/html" hidden><button class="btn secondary" id="preview">Pré-visualizar</button><button class="btn publish blocked" id="publish" disabled>Publicar</button></div></div>
 <section class="card editor">
 <input class="title" id="title" placeholder="Título">
-<div class="content" id="content" contenteditable="true"><p>Comece a preparar o conteúdo aqui.</p></div>
+<div class="content" id="content" contenteditable="true"><p>Comece a preparar o conteúdo aqui.</p></div><p class="muted" id="importStatus">Nenhum HTML do Claude importado.</p>
 </section>
 <section class="card"><h3>Metadados</h3><div id="articleOnly"><label class="muted">Labels<input class="field" placeholder="economia, finanças, ..."></label><br><label class="muted">Permalink<input class="field" placeholder="/novo-artigo"></label><br><label class="muted">Meta description<input class="field" placeholder="Descrição para mecanismos de busca"></label></div></section>
 </main>
@@ -43,7 +43,23 @@ titleInput.placeholder=documentType==='page'?'Título da página':'Título do ar
 const articleOnly=document.getElementById('articleOnly');
 if(documentType==='page') articleOnly.hidden=true;
 document.querySelector('.nav.active').textContent=documentType==='page'?'Páginas':'Artigos';
-const state={workflow:'draft'};
+const state={workflow:'draft', documentType};
+const importButton=document.getElementById('importClaude');
+const importFile=document.getElementById('claudeHtml');
+const importStatus=document.getElementById('importStatus');
+importButton.onclick=()=>importFile.click();
+importFile.onchange=async()=> {
+  const file=importFile.files?.[0];
+  if(!file) return;
+  const html=await file.text();
+  const titleMatch=html.match(/<h1[^>]*>([\\s\\S]*?)<\\/h1>/i);
+  const body=html.replace(/<h1[^>]*>[\\s\\S]*?<\\/h1>/i,'').trim();
+  if(titleMatch) titleInput.value=titleMatch[1].replace(/<[^>]+>/g,'').trim();
+  document.getElementById('content').innerHTML=body||'<p>HTML importado, mas sem conteúdo extraível.</p>';
+  state.workflow='draft';
+  importStatus.textContent='HTML do Claude importado como rascunho; publicação continua bloqueada.';
+  render();
+};
 const publish=document.getElementById('publish');
 function render(){publish.disabled=state.workflow!=='approved';publish.classList.toggle('blocked',publish.disabled);document.getElementById('approval').textContent=state.workflow==='approved'?'Aprovado — publicação liberada.':'Aguardando revisão e aprovação.'}
 document.getElementById('preview').onclick=()=>{state.workflow='preview';document.getElementById('corpus').textContent='consultado';document.getElementById('similarity').textContent='sinal editorial';document.getElementById('safe').textContent='revisão necessária';render()};
