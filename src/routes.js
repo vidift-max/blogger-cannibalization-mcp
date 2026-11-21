@@ -671,9 +671,8 @@ router.post(
           );
         }
 
-
-           SET synced_at=now()
-           WHERE id=$1 AND user_id=$2`,
+        await client.query(
+          "UPDATE blogs SET synced_at=now() WHERE id=$1 AND user_id=$2",
           [
             owned.rows[0].id,
             req.user.id
