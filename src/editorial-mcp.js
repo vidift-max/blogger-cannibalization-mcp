@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
 import { buildEditorialBrief } from './editorial-brief.js';
-import { isEditorialMcpConfigured, isEditorialMcpMethodAllowed, isEditorialMcpOriginAllowed, authorizeEditorialMcpRequest, syncAgeSeconds } from './editorial-mcp-auth.js';
+import { isEditorialMcpConfigured, isEditorialMcpMethodAllowed, isEditorialMcpOriginAllowed, authorizeEditorialMcpRequest, syncAgeSeconds, syncFreshness } from './editorial-mcp-auth.js';
 
 async function loadCorpus(blogId) {
   const { query } = await import('./db.js');
@@ -94,6 +94,11 @@ function createServer() {
                 },
                 synced_at: blog.synced_at,
                 sync_age_seconds: syncAgeSeconds(blog.synced_at),
+                corpus_freshness: syncFreshness(
+                  blog.synced_at,
+                  Date.now(),
+                  process.env.MCP_EDITORIAL_MAX_SYNC_AGE_SECONDS || 86400
+                ),
                 corpus_size: corpus.length,
                 brief
               },
