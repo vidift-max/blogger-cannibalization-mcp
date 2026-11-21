@@ -85,3 +85,13 @@ GPT-6 is therefore an editorial intelligence layer, not the owner of the Claude 
 ## Freshness signal
 
 The `get_editorial_brief` response includes `sync_age_seconds` alongside `synced_at`. GPT-6 should treat this as evidence of corpus freshness, not as proof that Blogger is continuously monitored. If freshness is too old for the editorial task, the platform must synchronize the blog before relying on the brief.
+## Deployment configuration
+
+The bridge requires two Render environment variables on the deployed service:
+
+- `MCP_EDITORIAL_TOKEN`: a strong secret bearer token; never commit or place it in source control.
+- `MCP_EDITORIAL_BLOG_ID`: the single Blogger blog ID that this bridge is allowed to query.
+
+Configuration is intentionally deployment-scoped. The bridge does not accept a blog ID from the MCP caller, preventing a caller from selecting another tenant's corpus.
+
+Do not expose these values in diagnostics, logs, prompts, or client-visible error messages. Configure them only through the service's secret/environment-variable mechanism.
