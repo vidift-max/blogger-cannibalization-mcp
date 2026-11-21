@@ -26,6 +26,8 @@ export function deserializeWorkspace(raw) {
     if (!workspace || workspace.version !== EDITOR_WORKSPACE_STORAGE_VERSION) return null;
     if (!workspace.document || typeof workspace.document !== 'object') return null;
     if (!Array.isArray(workspace.sections) || !workspace.workflow || typeof workspace.workflow !== 'object') return null;
+    if (!workspace.metadata || typeof workspace.metadata !== 'object') return null;
+    if (!workspace.seo_intelligence || typeof workspace.seo_intelligence !== 'object') return null;
     return workspace;
   } catch {
     return null;
