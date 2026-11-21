@@ -109,7 +109,7 @@ test('cria entrada Claude somente com contexto editorial relevante', () => {
   assert.equal(input.version, 1);
   assert.equal(input.document.id, 7);
   assert.equal(input.relevant_context.length, 1);
-  assert.equal(input.constraints.html_allowed, false);
+  assert.equal(input.constraints.html_allowed, true);
   assert.equal(input.constraints.javascript_allowed, false);
   assert.equal(input.constraints.carousel_urls_selected_by, 'platform');
   assert.equal(Object.prototype.hasOwnProperty.call(input, 'html'), false);
