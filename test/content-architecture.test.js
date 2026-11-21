@@ -10,6 +10,7 @@ import {
   createCorrectionRequest,
   createCorrectionProviderInput,
   validateCorrectionProviderOutput,
+  validateClaudeHtmlOutput,
   validateProviderOutput
 } from '../src/content-architecture.js';
 
@@ -132,4 +133,14 @@ test('aceita saída Claude estruturada e rejeita arquitetura', () => {
   assert.equal(invalid.valid, false);
   assert.ok(invalid.errors.some(error => error.includes('implementation_markup_forbidden')));
   assert.ok(invalid.errors.includes('interaction_javascript_forbidden'));
+});
+
+
+test('valida a saída manual do Claude como HTML puro sem permitir scripts ou CSS', () => {
+  const valid = validateClaudeHtmlOutput('<h1>Título</h1><p>Texto novo.</p><h2>Detalhes</h2>');
+  assert.equal(valid.valid, true);
+
+  const invalid = validateClaudeHtmlOutput('<h1>Título</h1><script>alert(1)</script><p>Texto</p>');
+  assert.equal(invalid.valid, false);
+  assert.ok(invalid.errors.includes('javascript_forbidden'));
 });
