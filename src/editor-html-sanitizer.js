@@ -37,7 +37,7 @@ function renderNode(node) {
   if (node.nodeType === 3) return escapeHtml(node.nodeValue ?? node.textContent ?? '');
   if (node.nodeType !== 1) return '';
   // Only serialize HTML elements; never reinterpret foreign-namespace nodes as HTML.
-  if (node.namespaceURI && node.namespaceURI !== 'http://www.w3.org/1999/xhtml') return '';
+  if (node.namespaceURI !== 'http://www.w3.org/1999/xhtml') return '';
   const tag = String(node.tagName || '').toLowerCase();
   if (DROP_WITH_CONTENT.has(tag)) return '';
   const children = Array.from(node.childNodes || []).map(renderNode).join('');
