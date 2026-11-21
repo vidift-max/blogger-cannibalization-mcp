@@ -5,7 +5,7 @@ import { sanitizeEditorHtml } from '../src/editor-html-sanitizer.js';
 function text(value) { return { nodeType: 3, nodeValue: value }; }
 function element(tagName, children = [], attrs = {}) {
   return {
-    nodeType: 1, tagName, childNodes: children,
+    nodeType: 1, tagName, namespaceURI: 'http://www.w3.org/1999/xhtml', childNodes: children,
     getAttribute(name) { return attrs[name] ?? null; }
   };
 }
@@ -84,4 +84,14 @@ test('sanitizer rejects foreign-namespace elements even when their tag names are
     htmlParagraph
   ]) });
   assert.equal(html, '<p>valid HTML</p>');
+});
+
+test('sanitizer rejects elements without an explicit HTML namespace', () => {
+  const ambiguous = {
+    nodeType: 1,
+    tagName: 'p',
+    childNodes: [text('ambiguous element')]
+  };
+  const html = sanitizeEditorHtml('', { parseHtml: parseFixture([ambiguous]) });
+  assert.equal(html, '');
 });
