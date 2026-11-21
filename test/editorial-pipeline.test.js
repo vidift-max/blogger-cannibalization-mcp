@@ -27,7 +27,15 @@ test('prepares a compact provider package from relevant corpus context', () => {
   assert.equal(result.provider_input.task, 'write_article');
   assert.equal(result.provider_input.relevant_documents.length, 1);
   assert.equal(result.provider_input.relevant_documents[0].id, '1');
-  assert.equal(result.provider_policy.content_only, true);
+  assert.equal(result.provider_input.output_contract.format, 'structured_json');
+  assert.ok(result.provider_input.output_contract.required_fields.includes('blocks'));
+  assert.ok(result.provider_input.output_contract.allowed_block_types.includes('paragraph'));
+  assert.ok(result.provider_input.output_contract.allowed_interaction_types.includes('calculator'));
+  assert.equal(result.provider_input.output_contract.related_carousel, 'platform_selected');
+  assert.equal(result.provider_policy.structured_content_only, true);
+  assert.equal(result.provider_policy.html_allowed, false);
+  assert.equal(result.provider_policy.css_allowed, false);
+  assert.equal(result.provider_policy.javascript_allowed, false);
   assert.equal(result.provider_policy.platform_owns_css, true);
   assert.equal(result.provider_policy.publication_requires_user_approval, true);
 });
