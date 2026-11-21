@@ -34,3 +34,30 @@ test('monta briefing com corpus relevante e conflitos de intenção', () => {
   assert.ok(Array.isArray(result.occupied_topics));
   assert.ok(Array.isArray(result.high_risk_document_ids));
 });
+
+
+test('lista apenas documentos relevantes entre os IDs de alto risco', () => {
+  const corpus = [
+    {
+      id: 10,
+      title: 'Mortgage refinance options and rates',
+      content_text: 'Compare mortgage refinance options and current rates.'
+    },
+    {
+      id: 11,
+      title: 'Mortgage refinance options and rates explained',
+      content_text: 'A detailed guide to mortgage refinance options and rates.'
+    }
+  ];
+
+  const result = buildEditorialBrief({
+    corpus,
+    query: 'mortgage refinance',
+    limit: 1
+  });
+
+  assert.equal(result.relevant_documents.length, 1);
+  assert.equal(result.relevant_documents[0].id, 10);
+  assert.ok(result.cannibalization_findings.some(finding => finding.risk === 'HIGH'));
+  assert.deepEqual(result.high_risk_document_ids, ['10']);
+});
