@@ -4,7 +4,7 @@
  * instead of becoming arbitrary HTML.
  */
 
-import { CONTENT_BLOCK_TYPES, validateProviderOutput } from './content-architecture.js';
+import { CONTENT_BLOCK_TYPES, validateProviderOutput, validateCorrectionProviderOutput } from './content-architecture.js';
 import { normalizeInteractions } from './interaction-catalog.js';
 
 export function normalizeProviderArticle(value) {
@@ -35,5 +35,30 @@ export function normalizeProviderArticle(value) {
     blocks,
     interactions: normalizeInteractions(value.interactions),
     related_carousel: []
+  };
+}
+
+
+export function normalizeCorrectionProviderOutput(value) {
+  const validation = validateCorrectionProviderOutput(value);
+
+  if (!validation.valid) {
+    return { ok: false, errors: validation.errors };
+  }
+
+  const normalized = normalizeProviderArticle(value);
+
+  if (!normalized.ok) {
+    return normalized;
+  }
+
+  return {
+    ok: true,
+    correction: {
+      article: normalized.article,
+      blocks: normalized.blocks,
+      interactions: normalized.interactions,
+      related_carousel: []
+    }
   };
 }
