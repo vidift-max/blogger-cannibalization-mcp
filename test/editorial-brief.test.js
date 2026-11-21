@@ -32,4 +32,5 @@ test('monta briefing com corpus relevante e conflitos de intenção', () => {
   assert.equal(result.relevant_documents[0].id, 1);
   assert.ok(Array.isArray(result.cannibalization_findings));
   assert.ok(Array.isArray(result.occupied_topics));
+  assert.ok(Array.isArray(result.high_risk_document_ids));
 });
