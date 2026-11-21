@@ -3,7 +3,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod';
 import { buildEditorialBrief } from './editorial-brief.js';
 import { query } from './db.js';
-import { isEditorialMcpConfigured, authorizeEditorialMcpRequest } from './editorial-mcp-auth.js';
+import { isEditorialMcpConfigured, authorizeEditorialMcpRequest, syncAgeSeconds } from './editorial-mcp-auth.js';
 
 async function loadCorpus(blogId) {
   const blog = await query(
@@ -46,12 +46,6 @@ async function loadCorpus(blogId) {
       }))
     ]
   };
-}
-
-export function syncAgeSeconds(syncedAt) {
-  if (!syncedAt) return null;
-  const ms = Date.now() - new Date(syncedAt).getTime();
-  return Number.isFinite(ms) ? Math.max(0, Math.floor(ms / 1000)) : null;
 }
 
 function createServer() {
