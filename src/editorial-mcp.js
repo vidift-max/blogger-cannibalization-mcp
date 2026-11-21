@@ -154,18 +154,7 @@ export async function handleEditorialMcp(req, res) {
 
   await createServer().connect(transport);
 
-  const chunks = [];
-  for await (const chunk of req) {
-    chunks.push(chunk);
-  }
-
-  const raw = Buffer.concat(chunks).toString('utf8');
-
-  await transport.handleRequest(
-    req,
-    res,
-    raw ? JSON.parse(raw) : undefined
-  );
+  await transport.handleRequest(req, res, req.body);
 }
 
 export async function getEditorialMcpConfig() {
