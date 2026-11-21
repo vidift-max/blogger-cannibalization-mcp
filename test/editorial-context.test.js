@@ -58,7 +58,7 @@ test('ignora palavras comuns em inglês e português na seleção editorial', ()
 
   const result = selectEditorialContext(
     corpus,
-    'what changed with the new rules for your family'
+    'what is this with the new and your para com uma'
   );
 
   assert.deepEqual(result.map(item => item.id), []);
