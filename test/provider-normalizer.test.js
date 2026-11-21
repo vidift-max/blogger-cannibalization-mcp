@@ -37,3 +37,18 @@ test('normalizer rejects invalid provider output before assembly', () => {
   assert.equal(result.ok, false);
   assert.ok(result.errors.some(error => error.startsWith('unsupported_block_type')));
 });
+
+test('preserva metadados editoriais sem aceitar HTML de fornecedor', () => {
+  const out = normalizeProviderArticle({
+    article: {
+      title: 'T',
+      summary: 'Resumo',
+      target_query: 'consulta alvo'
+    },
+    blocks: [{ type: 'paragraph', content: 'Texto' }],
+    interactions: []
+  });
+  assert.equal(out.ok, true);
+  assert.equal(out.article.summary, 'Resumo');
+  assert.equal(out.article.target_query, 'consulta alvo');
+});
