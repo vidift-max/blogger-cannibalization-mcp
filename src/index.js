@@ -40,8 +40,6 @@ app.get('/healthz', async (_req, res) => {
   catch { res.status(503).json({ ok: false }); }
 });
 app.post('/mcp', handleEditorialMcp);
-app.get('/mcp', handleEditorialMcp);
-app.delete('/mcp', handleEditorialMcp);
 app.use('/api', router);
 app.use((err, _req, res, _next) => {
   console.error('[request]', err.message);
