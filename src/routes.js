@@ -26,6 +26,7 @@ import { normalizeBloggerDocument } from './blogger-content.js';
 import { countChangedSections } from './diff-count.js';
 import { createCorrectionRequest } from './content-architecture.js';
 import { selectEditorialContext } from './editorial-context.js';
+import { buildEditorialBrief } from './editorial-brief.js';
 
 export const router = express.Router();
 
@@ -1099,6 +1100,68 @@ router.get(
         synced_at: blog.rows[0].synced_at,
         corpus_size: corpus.length,
         context
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
+
+router.get(
+  '/blogs/:blogId/editorial-brief',
+  currentUser,
+  async (req, res, next) => {
+    try {
+      const queryText = String(req.query.q || '').trim();
+      const sourceTitle = String(req.query.title || '').trim();
+
+      if (!queryText) {
+        return res.status(400).json({ error: 'query_required' });
+      }
+
+      const blog = await query(
+        `SELECT id, name, url, synced_at
+         FROM blogs
+         WHERE id=$1 AND user_id=$2`,
+        [req.params.blogId, req.user.id]
+      );
+
+      if (!blog.rowCount) {
+        return res.status(404).json({ error: 'blog_not_found' });
+      }
+
+      const [posts, pages] = await Promise.all([
+        query(
+          `SELECT id,title,url,content_text,labels
+           FROM posts WHERE blog_id=$1 AND user_id=$2`,
+          [req.params.blogId, req.user.id]
+        ),
+        query(
+          `SELECT id,title,url,content_text
+           FROM pages WHERE blog_id=$1 AND user_id=$2`,
+          [req.params.blogId, req.user.id]
+        )
+      ]);
+
+      const corpus = [
+        ...posts.rows.map(row => ({ ...row, document_type: 'article' })),
+        ...pages.rows.map(row => ({ ...row, document_type: 'page', labels: [] }))
+      ];
+
+      const brief = buildEditorialBrief({
+        corpus,
+        query: queryText,
+        sourceTitle,
+        limit: req.query.limit
+      });
+
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({
+        blog: { name: blog.rows[0].name, url: blog.rows[0].url },
+        synced_at: blog.rows[0].synced_at,
+        corpus_size: corpus.length,
+        brief
       });
     } catch (e) {
       next(e);
