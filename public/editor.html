@@ -33,7 +33,8 @@ main{min-width:0;padding:24px}.card{background:#fff;border:1px solid #dadce0;bor
 <div class="tool"><strong>Aprovação</strong><p class="muted" id="approval">Aguardando revisão.</p></div>
 </aside>
 </div>
-<script>
+<script type="module">
+import { importClaudeHtmlToWorkspace } from '/src/claude-workspace-import.js';
 const params=new URLSearchParams(location.search);
 const documentType=params.get('type')==='page'?'page':'article';
 document.documentElement.dataset.documentType=documentType;
@@ -52,12 +53,16 @@ importFile.onchange=async()=> {
   const file=importFile.files?.[0];
   if(!file) return;
   const html=await file.text();
-  const titleMatch=html.match(/<h1[^>]*>([\\s\\S]*?)<\\/h1>/i);
-  const body=html.replace(/<h1[^>]*>[\\s\\S]*?<\\/h1>/i,'').trim();
-  if(titleMatch) titleInput.value=titleMatch[1].replace(/<[^>]+>/g,'').trim();
-  document.getElementById('content').innerHTML=body||'<p>HTML importado, mas sem conteúdo extraível.</p>';
-  state.workflow='draft';
-  importStatus.textContent='HTML do Claude importado como rascunho; publicação continua bloqueada.';
+  const imported=importClaudeHtmlToWorkspace(html,{documentType});
+  if(!imported.ok){
+    importStatus.textContent='HTML do Claude rejeitado: '+imported.errors.join(', ');
+    return;
+  }
+  const workspace=imported.workspace;
+  titleInput.value=workspace.document.title;
+  document.getElementById('content').innerHTML=workspace.document.content_html||'<p>Sem blocos de conteúdo extraíveis.</p>';
+  state.workflow=workspace.workflow.state;
+  importStatus.textContent='HTML normalizado e importado como rascunho; publicação continua bloqueada.';
   render();
 };
 const publish=document.getElementById('publish');
