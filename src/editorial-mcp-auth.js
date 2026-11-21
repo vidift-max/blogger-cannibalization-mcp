@@ -46,7 +46,12 @@ export function syncAgeSeconds(syncedAt, now = Date.now()) {
 
 export function syncFreshness(syncedAt, now = Date.now(), maxAgeSeconds = 86400) {
   const ageSeconds = syncAgeSeconds(syncedAt, now);
-  const configuredMaxAge = Number(maxAgeSeconds);
+  const rawMaxAge = typeof maxAgeSeconds === 'string'
+    ? maxAgeSeconds.trim()
+    : maxAgeSeconds;
+  const configuredMaxAge = rawMaxAge === '' || rawMaxAge === null || rawMaxAge === undefined
+    ? NaN
+    : Number(rawMaxAge);
   const safeMaxAge = Number.isFinite(configuredMaxAge) && configuredMaxAge >= 0
     ? configuredMaxAge
     : 86400;
