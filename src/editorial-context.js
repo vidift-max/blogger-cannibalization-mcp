@@ -3,6 +3,8 @@
  * for editorial/anti-cannibalization decisions.
  */
 
+const SHORT_FINANCIAL_TERMS = new Set(['apr', 'ira', 'irs', 'fha', 'fed', 'ssa']);
+
 const STOP_WORDS = new Set(`
 the a an and or for to of in on with from by is are was were be been being
 this that these those it its as at into over under after before about
@@ -21,7 +23,7 @@ function tokenize(value) {
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, ' ')
       .split(/\s+/)
-      .filter(token => token.length >= 4 && !STOP_WORDS.has(token))
+      .filter(token => (token.length >= 4 || SHORT_FINANCIAL_TERMS.has(token)) && !STOP_WORDS.has(token))
   );
 }
 
