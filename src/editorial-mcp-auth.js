@@ -28,10 +28,10 @@ export function authorizeEditorialMcpRequest(req, env = process.env) {
   if (!isEditorialMcpConfigured(env)) return false;
 
   const header = String(req.headers.authorization || '');
-  if (!header.startsWith('Bearer ')) return false;
+  const match = /^Bearer ([^\\s]+)$/i.exec(header);
+  if (!match) return false;
 
-  const presented = header.slice(7);
-  if (!presented) return false;
+  const presented = match[1];
 
   return safeEqual(
     sha256(presented),
