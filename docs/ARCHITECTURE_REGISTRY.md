@@ -78,3 +78,8 @@ Esse endpoint é uma camada de preparação para a futura ponte de consulta do G
 ### Brief editorial para nova notícia
 
 A rota `/blogs/:blogId/editorial-brief?q=...&title=...` combina o subconjunto relevante do corpus com os achados de análise de canibalização. O resultado inclui documentos relevantes, conflitos de intenção/tópico, tópicos já ocupados e IDs de documentos classificados como HIGH. Essa camada serve para orientar o ângulo de uma nova notícia; não transforma similaridade em prova de disputa no Google.
+
+
+## Editorial MCP bridge (read-only)
+
+The application now has an optional MCP Streamable HTTP bridge at `/mcp` for the editorial workflow. It exposes only `get_editorial_brief`, scoped by `MCP_EDITORIAL_BLOG_ID` and protected by `MCP_EDITORIAL_TOKEN`. It reads the latest synchronized Blogger corpus and never exposes Blogger OAuth credentials or mutation endpoints. The bridge is application-side infrastructure; a separate compatible ChatGPT MCP/connector configuration and authorization are still required before GPT-6 can call it directly. See `docs/EDITORIAL_MCP_BRIDGE.md`.
