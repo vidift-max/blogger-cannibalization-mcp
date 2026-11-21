@@ -89,3 +89,22 @@ export function planDomainMigration(documents, oldDomain, newDomain) {
       replacements: result.replacements, changed: result.html !== source };
   });
 }
+
+
+export function createDomainMigrationPlan(documents, themeHtml, oldDomain, newDomain) {
+  const oldNormalized = normalizeDomain(oldDomain);
+  const newNormalized = normalizeDomain(newDomain);
+  if (oldNormalized === newNormalized) {
+    throw new Error('O domínio antigo e o novo devem ser diferentes.');
+  }
+  const documentPlans = planDomainMigration(documents, oldNormalized, newNormalized);
+  const themePlan = planThemeMigration(themeHtml, oldNormalized, newNormalized);
+  return {
+    old_domain: oldNormalized,
+    new_domain: newNormalized,
+    approved: false,
+    documents: documentPlans,
+    theme: themePlan,
+    summary: summarizeDomainMigration(documentPlans, themePlan)
+  };
+}
