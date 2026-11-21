@@ -422,7 +422,7 @@ function comparePosts(a, b) {
   const phraseEvidence = Math.min(shared.length / 2, 1);
 
   const difference = intentDifference(titleA, titleB);
-  const intentInfo = intentRelation(titleA, titleB);
+  const intentInfo = intentRelation(a.title || '', b.title || '');
 
   const topicInfo = compareTopics(
     articleText(a),
