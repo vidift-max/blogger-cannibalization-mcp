@@ -3,27 +3,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod';
 import { buildEditorialBrief } from './editorial-brief.js';
 import { query } from './db.js';
-import { sha256, safeEqual } from './security.js';
-
-function configured() {
-  return Boolean(
-    process.env.MCP_EDITORIAL_TOKEN &&
-    process.env.MCP_EDITORIAL_BLOG_ID
-  );
-}
-
-function authorized(req) {
-  if (!configured()) return false;
-
-  const header = String(req.headers.authorization || '');
-  if (!header.startsWith('Bearer ')) return false;
-
-  const presented = header.slice(7);
-  return safeEqual(
-    sha256(presented),
-    sha256(process.env.MCP_EDITORIAL_TOKEN)
-  );
-}
+import { isEditorialMcpConfigured, authorizeEditorialMcpRequest } from './editorial-mcp-auth.js';
 
 async function loadCorpus(blogId) {
   const blog = await query(
@@ -129,14 +109,14 @@ function createServer() {
 }
 
 export async function handleEditorialMcp(req, res) {
-  if (!configured()) {
+  if (!isEditorialMcpConfigured()) {
     res.status(503).json({
       error: 'editorial_mcp_not_configured'
     });
     return;
   }
 
-  if (!authorized(req)) {
+  if (!authorizeEditorialMcpRequest(req)) {
     res.setHeader('WWW-Authenticate', 'Bearer');
     res.status(401).json({
       error: 'unauthorized'
@@ -159,7 +139,7 @@ export async function handleEditorialMcp(req, res) {
 
 export async function getEditorialMcpConfig() {
   return {
-    configured: configured(),
+    configured: isEditorialMcpConfigured(),
     blog_id: process.env.MCP_EDITORIAL_BLOG_ID || null
   };
 }
