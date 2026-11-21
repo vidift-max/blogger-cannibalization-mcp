@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createContentWorkspace } from '../src/content-workspace.js';
-import { serializeWorkspace, deserializeWorkspace, saveWorkspace, loadWorkspace, clearWorkspace, DEFAULT_WORKSPACE_STORAGE_KEY } from '../src/editor-workspace-storage.js';
+import { serializeWorkspace, deserializeWorkspace, saveWorkspace, loadWorkspace, clearWorkspace, DEFAULT_WORKSPACE_STORAGE_KEY, getWorkspaceStorageKey } from '../src/editor-workspace-storage.js';
 
 test('workspace storage round-trips editorial data without operator session',()=>{
   const workspace=createContentWorkspace({title:'Teste',contentHtml:'<p>Conteúdo</p>',metadata:{labels:['seo']}});
@@ -43,18 +43,28 @@ test('storage adapter supports an explicit namespaced key',()=>{
 
 test('invalid editorial sections are rejected during restore',()=>{
   const workspace=createContentWorkspace();
-  const invalidMetadata={...workspace,metadata:null};
-  const invalidSeo={...workspace,seo_intelligence:null};
-  assert.equal(deserializeWorkspace(JSON.stringify({...invalidMetadata,version:1})),null);
-  assert.equal(deserializeWorkspace(JSON.stringify({...invalidSeo,version:1})),null);
+  assert.equal(deserializeWorkspace(JSON.stringify({...workspace,version:1,metadata:null})),null);
+  assert.equal(deserializeWorkspace(JSON.stringify({...workspace,version:1,seo_intelligence:null})),null);
 });
 
 test('restore rejects malformed document fields and inconsistent publication state',()=>{
   const workspace=createContentWorkspace({title:'Valid'});
-  const invalidDocument={...workspace,document:{...workspace.document,content_html:42}};
-  const invalidWorkflow={...workspace,workflow:{state:'draft',publication_allowed:true}};
-  const invalidSections={...workspace,sections:['content',false]};
-  assert.equal(deserializeWorkspace(JSON.stringify({...invalidDocument,version:1})),null);
-  assert.equal(deserializeWorkspace(JSON.stringify({...invalidWorkflow,version:1})),null);
-  assert.equal(deserializeWorkspace(JSON.stringify({...invalidSections,version:1})),null);
+  assert.equal(deserializeWorkspace(JSON.stringify({...workspace,version:1,document:{...workspace.document,content_html:42}})),null);
+  assert.equal(deserializeWorkspace(JSON.stringify({...workspace,version:1,workflow:{state:'draft',publication_allowed:true}})),null);
+  assert.equal(deserializeWorkspace(JSON.stringify({...workspace,version:1,sections:['content',false]})),null);
+});
+
+test('article and page workspaces use isolated storage keys',()=>{
+  const articleKey=getWorkspaceStorageKey('article');
+  const pageKey=getWorkspaceStorageKey('page');
+  assert.equal(articleKey,'bsi:content-workspace:article');
+  assert.equal(pageKey,'bsi:content-workspace:page');
+  assert.notEqual(articleKey,pageKey);
+  assert.throws(()=>getWorkspaceStorageKey('comment'),/invalid_document_type/);
+  const map=new Map();
+  const storage={setItem:(k,v)=>map.set(k,v),getItem:k=>map.get(k)||null,removeItem:k=>map.delete(k)};
+  saveWorkspace(createContentWorkspace({documentType:'article',title:'Artigo'}),storage,articleKey);
+  saveWorkspace(createContentWorkspace({documentType:'page',title:'Página'}),storage,pageKey);
+  assert.equal(loadWorkspace(storage,articleKey).document.title,'Artigo');
+  assert.equal(loadWorkspace(storage,pageKey).document.title,'Página');
 });
