@@ -15,6 +15,8 @@ test('editorial MCP stays disabled without explicit bridge credentials', async (
 
     assert.equal(config.configured, false);
     assert.equal(config.blog_id, null);
+    assert.equal('token' in config, false);
+    assert.equal('MCP_EDITORIAL_TOKEN' in config, false);
   } finally {
     if (priorToken === undefined) delete process.env.MCP_EDITORIAL_TOKEN;
     else process.env.MCP_EDITORIAL_TOKEN = priorToken;
