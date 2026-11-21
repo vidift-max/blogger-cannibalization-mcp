@@ -45,8 +45,8 @@ test('invalid editorial sections are rejected during restore',()=>{
   const workspace=createContentWorkspace();
   const invalidMetadata={...workspace,metadata:null};
   const invalidSeo={...workspace,seo_intelligence:null};
-  assert.equal(deserializeWorkspace(JSON.stringify(invalidMetadata,{version:1})),null);
-  assert.equal(deserializeWorkspace(JSON.stringify(invalidSeo,{version:1})),null);
+  assert.equal(deserializeWorkspace(JSON.stringify({...invalidMetadata,version:1})),null);
+  assert.equal(deserializeWorkspace(JSON.stringify({...invalidSeo,version:1})),null);
 });
 
 test('restore rejects malformed document fields and inconsistent publication state',()=>{
