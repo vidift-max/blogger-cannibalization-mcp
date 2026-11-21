@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { replaceDomainInHtml, replaceDomainInText, planDomainMigration, planThemeMigration } from '../src/domain-migration.js';
+import { replaceDomainInHtml, replaceDomainInText, planDomainMigration, planThemeMigration, summarizeDomainMigration } from '../src/domain-migration.js';
 
 test('replaces old domain in link and image URL attributes', () => {
   const result = replaceDomainInHtml('<a href="https://old.example.com/post">Post</a><img src="https://www.old.example.com/img.jpg">', 'old.example.com', 'new.example.com');
@@ -50,4 +50,18 @@ test('replaces protocol-relative old-domain URLs while preserving the path', () 
   const result = replaceDomainInText('//www.old.example.com/a?q=1#top', 'old.example.com', 'new.example.com');
   assert.equal(result.replacements, 1);
   assert.equal(result.text, 'https://new.example.com/a?q=1#top');
+});
+
+
+test('summarizes article, page and theme migration counts', () => {
+  const documents = planDomainMigration([
+    { type: 'article', source_id: '1', content_html: '<a href="https://old.example.com/a">A</a>' },
+    { type: 'article', source_id: '2', content_html: '<p>Nothing</p>' },
+    { type: 'page', source_id: '3', content_html: '<a href="https://old.example.com/p">P</a>' }
+  ], 'old.example.com', 'new.example.com');
+  const theme = planThemeMigration('<a href="https://old.example.com/t">T</a>', 'old.example.com', 'new.example.com');
+  assert.deepEqual(summarizeDomainMigration(documents, theme), {
+    articles: 2, pages: 1, documents_changed: 2, document_replacements: 2,
+    theme_changed: true, theme_replacements: 1, total_replacements: 3
+  });
 });
