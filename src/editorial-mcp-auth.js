@@ -1,5 +1,9 @@
 import { sha256, safeEqual } from './security.js';
 
+export function isEditorialMcpMethodAllowed(method) {
+  return String(method || '').toUpperCase() === 'POST';
+}
+
 export function isEditorialMcpConfigured(env = process.env) {
   return Boolean(
     env.MCP_EDITORIAL_TOKEN &&
