@@ -77,7 +77,9 @@ approve.id='approve';
 approve.textContent='Aprovar publicação';
 document.querySelector('.actions').insertBefore(approve,publish);
 approve.onclick=()=>{
+  if(!window.confirm('Você confirma explicitamente que este conteúdo pode ser liberado para publicação?')) return;
   try {
+    state.operator.user_approved=true;
     grantPublishCapability(state.operator);
     if(!state.workspace) throw new Error('workspace_required');
     transitionWorkspace(state.workspace,'approved');
@@ -86,7 +88,7 @@ approve.onclick=()=>{
     document.getElementById('approval').textContent='Aprovação explícita necessária.';
   }
 };
-publish.onclick=()=>{if(canPublishWorkspace(state.workspace) && canOperatorPublish(state.operator))alert('Publicação ainda requer confirmação explícita do usuário.')};
+publish.onclick=()=>{if(canPublishWorkspace(state.workspace) && canOperatorPublish(state.operator) && window.confirm('Confirmar publicação deste conteúdo?'))alert('Publicação autorizada pelo usuário.')};
 render();
 </script>
 </body>
