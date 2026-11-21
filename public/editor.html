@@ -35,6 +35,7 @@ main{min-width:0;padding:24px}.card{background:#fff;border:1px solid #dadce0;bor
 </div>
 <script type="module">
 import { importClaudeHtmlToWorkspace } from '/src/claude-workspace-import.js';
+import { createOperatorSession, grantPublishCapability, canOperatorPublish } from '/src/operator-capabilities.js';
 const params=new URLSearchParams(location.search);
 const documentType=params.get('type')==='page'?'page':'article';
 document.documentElement.dataset.documentType=documentType;
@@ -44,7 +45,7 @@ titleInput.placeholder=documentType==='page'?'Título da página':'Título do ar
 const articleOnly=document.getElementById('articleOnly');
 if(documentType==='page') articleOnly.hidden=true;
 document.querySelector('.nav.active').textContent=documentType==='page'?'Páginas':'Artigos';
-const state={workflow:'draft', documentType};
+const state={workflow:'draft', documentType, operator:createOperatorSession({remote:true})};
 const importButton=document.getElementById('importClaude');
 const importFile=document.getElementById('claudeHtml');
 const importStatus=document.getElementById('importStatus');
@@ -66,9 +67,23 @@ importFile.onchange=async()=> {
   render();
 };
 const publish=document.getElementById('publish');
-function render(){publish.disabled=state.workflow!=='approved';publish.classList.toggle('blocked',publish.disabled);document.getElementById('approval').textContent=state.workflow==='approved'?'Aprovado — publicação liberada.':'Aguardando revisão e aprovação.'}
+function render(){publish.disabled=state.workflow!=='approved' || !canOperatorPublish(state.operator);publish.classList.toggle('blocked',publish.disabled);document.getElementById('approval').textContent=state.workflow==='approved'?'Aprovado — publicação liberada.':'Aguardando revisão e aprovação.'}
 document.getElementById('preview').onclick=()=>{state.workflow='preview';document.getElementById('corpus').textContent='consultado';document.getElementById('similarity').textContent='sinal editorial';document.getElementById('safe').textContent='revisão necessária';render()};
 document.getElementById('draft').onclick=()=>{state.workflow='draft';render()};
+const approve=document.createElement('button');
+approve.className='btn secondary';
+approve.id='approve';
+approve.textContent='Aprovar publicação';
+document.querySelector('.actions').insertBefore(approve,publish);
+approve.onclick=()=>{
+  try {
+    grantPublishCapability(state.operator);
+    state.workflow='approved';
+    render();
+  } catch(e) {
+    document.getElementById('approval').textContent='Aprovação explícita necessária.';
+  }
+};
 publish.onclick=()=>{if(state.workflow==='approved')alert('Publicação ainda requer confirmação explícita do usuário.')};
 render();
 </script>
