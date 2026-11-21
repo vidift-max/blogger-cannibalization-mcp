@@ -46,7 +46,11 @@ titleInput.placeholder=documentType==='page'?'Título da página':'Título do ar
 const articleOnly=document.getElementById('articleOnly');
 if(documentType==='page') articleOnly.hidden=true;
 document.querySelector('.nav.active').textContent=documentType==='page'?'Páginas':'Artigos';
+const STORAGE_KEY='bsi:content-workspace:'+documentType;
 const state={workspace:null, documentType, operator:createOperatorSession({remote:true})};
+function saveWorkspace(){if(state.workspace) localStorage.setItem(STORAGE_KEY,JSON.stringify(state.workspace));}
+function loadWorkspace(){try{const raw=localStorage.getItem(STORAGE_KEY);return raw?JSON.parse(raw):null;}catch(e){return null;}}
+function hydrateWorkspace(workspace){if(!workspace)return false;state.workspace=workspace;titleInput.value=workspace.document.title;document.getElementById('content').innerHTML=workspace.document.content_html||'<p>Sem blocos de conteúdo extraíveis.</p>';importStatus.textContent='Rascunho recuperado deste navegador.';render();return true;}
 const importButton=document.getElementById('importClaude');
 const importFile=document.getElementById('claudeHtml');
 const importStatus=document.getElementById('importStatus');
@@ -64,11 +68,12 @@ importFile.onchange=async()=> {
   titleInput.value=workspace.document.title;
   document.getElementById('content').innerHTML=workspace.document.content_html||'<p>Sem blocos de conteúdo extraíveis.</p>';
   state.workspace=workspace;
+  saveWorkspace();
   importStatus.textContent='HTML normalizado e importado como rascunho; publicação continua bloqueada.';
   render();
 };
 const publish=document.getElementById('publish');
-function render(){const workflow=state.workspace?.workflow?.state||'draft';const publicationAllowed=state.workspace ? canPublishWorkspace(state.workspace) : false;publish.disabled=workflow!=='approved' || !publicationAllowed || !canOperatorPublish(state.operator);publish.classList.toggle('blocked',publish.disabled);document.getElementById('approval').textContent=workflow==='approved'?'Aprovado — publicação liberada.':'Aguardando revisão e aprovação.'}
+function render(){const workflow=state.workspace?.workflow?.state||'draft';const publicationAllowed=state.workspace ? canPublishWorkspace(state.workspace) : false;publish.disabled=workflow!=='approved' || !publicationAllowed || !canOperatorPublish(state.operator);publish.classList.toggle('blocked',publish.disabled);document.getElementById('approval').textContent=workflow==='approved'?'Aprovado — publicação liberada.':'Aguardando revisão e aprovação.';if(state.workspace) saveWorkspace();}
 document.getElementById('preview').onclick=()=>{if(!state.workspace)return;try{transitionWorkspace(state.workspace,'review');transitionWorkspace(state.workspace,'preview');}catch(e){document.getElementById('approval').textContent='Transição de prévia indisponível.';return;}document.getElementById('corpus').textContent='consultado';document.getElementById('similarity').textContent='sinal editorial';document.getElementById('safe').textContent='revisão necessária';render()};
 document.getElementById('draft').onclick=()=>{if(!state.workspace)return;const current=state.workspace.workflow.state;try{if(current==='review')transitionWorkspace(state.workspace,'draft');else if(current==='preview')transitionWorkspace(state.workspace,'review');else if(current==='approved')transitionWorkspace(state.workspace,'preview');render();}catch(e){document.getElementById('approval').textContent='Não foi possível retornar o workspace.';}};
 const approve=document.createElement('button');
@@ -89,6 +94,7 @@ approve.onclick=()=>{
   }
 };
 publish.onclick=()=>{if(canPublishWorkspace(state.workspace) && canOperatorPublish(state.operator) && window.confirm('Confirmar publicação deste conteúdo?'))alert('Publicação autorizada pelo usuário.')};
+hydrateWorkspace(loadWorkspace());
 render();
 </script>
 </body>
