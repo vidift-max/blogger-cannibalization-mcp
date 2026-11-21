@@ -44,3 +44,35 @@ test('related carousel respects the platform limit', () => {
 
   assert.equal(result.length, 6);
 });
+
+test('penaliza candidato com mesma intenção para reduzir concorrência interna', () => {
+  const out = selectRelatedCarousel({
+    article: {
+      id: '1',
+      title: 'Best checking accounts',
+      primary_topic: 'banking',
+      labels: ['banking'],
+      search_intent: 'commercial_comparison'
+    },
+    candidates: [
+      {
+        id: '2',
+        url: 'https://example.com/b',
+        title: 'Best checking accounts for students',
+        primary_topic: 'banking',
+        labels: ['banking'],
+        search_intent: 'commercial_comparison'
+      },
+      {
+        id: '3',
+        url: 'https://example.com/c',
+        title: 'How to open a checking account',
+        primary_topic: 'banking',
+        labels: ['banking'],
+        search_intent: 'informational_how_to'
+      }
+    ]
+  });
+  assert.equal(out.length, 2);
+  assert.ok(out[0].id === '3');
+});
