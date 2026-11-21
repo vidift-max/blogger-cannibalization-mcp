@@ -75,3 +75,20 @@ O campo `related_carousel` é reservado para a plataforma. O Claude não escolhe
 A resposta do Claude é **conteúdo**, não o artigo HTML final.
 
 A plataforma deverá validar a resposta, selecionar componentes, selecionar links relacionados e montar o HTML final usando a arquitetura salva.
+
+
+## Fluxo manual atual com Claude
+
+A integração atual é deliberadamente manual: a plataforma prepara o contexto e o prompt na área de criação; o operador acrescenta a fonte externa (link e material da notícia quando aplicável), envia o conjunto ao Claude e cola de volta a resposta na caixa da plataforma.
+
+### Formato da resposta do Claude
+
+Nesta etapa, o Claude deve devolver **HTML puro**, sem CSS, JavaScript, scripts, componentes executáveis ou comandos de arquitetura. A plataforma valida o HTML recebido, interpreta sua estrutura e distribui o conteúdo nos slots e componentes próprios antes da montagem final.
+
+O HTML recebido é um formato de transporte editorial; ele não concede ao Claude controle sobre o template, CSS, JavaScript, componentes, carrossel de relacionados ou publicação.
+
+### Fonte externa e orientação anti-canibalização
+
+Quando uma notícia externa for usada, o prompt da área de criação pode receber o link e instruções editoriais produzidas a partir do corpus atualizado do Blogger. Essas instruções devem indicar ângulos fortes da notícia e pontos que devem ser evitados por já estarem cobertos ou muito próximos de artigos/páginas existentes.
+
+A automação direta da chamada ao Claude permanece uma etapa futura; o fluxo manual não deve ser confundido com uma integração de API já implementada.
