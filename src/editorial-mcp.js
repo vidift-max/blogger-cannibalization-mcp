@@ -2,10 +2,10 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
 import { buildEditorialBrief } from './editorial-brief.js';
-import { query } from './db.js';
 import { isEditorialMcpConfigured, isEditorialMcpMethodAllowed, isEditorialMcpOriginAllowed, authorizeEditorialMcpRequest, syncAgeSeconds } from './editorial-mcp-auth.js';
 
 async function loadCorpus(blogId) {
+  const { query } = await import('./db.js');
   const blog = await query(
     `SELECT id,name,url,synced_at
      FROM blogs
