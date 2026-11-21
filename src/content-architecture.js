@@ -98,12 +98,12 @@ export function validateClaudeHtmlOutput(value) {
   const html = value.trim();
   const errors = [];
   if (!html) errors.push('html_output_empty');
-  if (!/<(?:h1|h2|h3|p|ul|ol|blockquote|table|div|section)\\b/i.test(html)) {
+  if (!/<(?:h1|h2|h3|p|ul|ol|blockquote|table|div|section)\b/i.test(html)) {
     errors.push('html_output_has_no_supported_content_elements');
   }
-  if (/<script\\b|javascript:/i.test(html)) errors.push('javascript_forbidden');
-  if (/<style\\b|\\sstyle\\s*=|<link\\b/i.test(html)) errors.push('css_markup_forbidden');
-  if (/<iframe\\b|<object\\b|<embed\\b/i.test(html)) errors.push('external_embed_forbidden');
+  if (/<script\b|javascript:/i.test(html)) errors.push('javascript_forbidden');
+  if (/<style\b|\sstyle\s*=|<link\b/i.test(html)) errors.push('css_markup_forbidden');
+  if (/<iframe\b|<object\b|<embed\b/i.test(html)) errors.push('external_embed_forbidden');
 
   return { valid: errors.length === 0, errors };
 }
@@ -218,7 +218,7 @@ const FORBIDDEN_PROVIDER_KEYS = Object.freeze([
 
 function containsImplementationMarkup(value) {
   if (typeof value !== 'string') return false;
-  return /<\\/?[a-z][^>]*>|<script\\b|javascript:/i.test(value);
+  return /<\/?[a-z][^>]*>|<script\b|javascript:/i.test(value);
 }
 
 function findForbiddenProviderFields(value, path = '') {
