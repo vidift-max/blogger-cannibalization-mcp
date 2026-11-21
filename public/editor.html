@@ -36,6 +36,7 @@ main{min-width:0;padding:24px}.card{background:#fff;border:1px solid #dadce0;bor
 <script type="module">
 import { importClaudeHtmlToWorkspace } from '/src/claude-workspace-import.js';
 import { createOperatorSession, grantPublishCapability, canOperatorPublish } from '/src/operator-capabilities.js';
+import { transitionWorkspace, canPublishWorkspace } from '/src/content-workspace.js';
 const params=new URLSearchParams(location.search);
 const documentType=params.get('type')==='page'?'page':'article';
 document.documentElement.dataset.documentType=documentType;
@@ -45,7 +46,7 @@ titleInput.placeholder=documentType==='page'?'Título da página':'Título do ar
 const articleOnly=document.getElementById('articleOnly');
 if(documentType==='page') articleOnly.hidden=true;
 document.querySelector('.nav.active').textContent=documentType==='page'?'Páginas':'Artigos';
-const state={workflow:'draft', documentType, operator:createOperatorSession({remote:true})};
+const state={workspace:null, documentType, operator:createOperatorSession({remote:true})};
 const importButton=document.getElementById('importClaude');
 const importFile=document.getElementById('claudeHtml');
 const importStatus=document.getElementById('importStatus');
@@ -62,14 +63,14 @@ importFile.onchange=async()=> {
   const workspace=imported.workspace;
   titleInput.value=workspace.document.title;
   document.getElementById('content').innerHTML=workspace.document.content_html||'<p>Sem blocos de conteúdo extraíveis.</p>';
-  state.workflow=workspace.workflow.state;
+  state.workspace=workspace;
   importStatus.textContent='HTML normalizado e importado como rascunho; publicação continua bloqueada.';
   render();
 };
 const publish=document.getElementById('publish');
-function render(){publish.disabled=state.workflow!=='approved' || !canOperatorPublish(state.operator);publish.classList.toggle('blocked',publish.disabled);document.getElementById('approval').textContent=state.workflow==='approved'?'Aprovado — publicação liberada.':'Aguardando revisão e aprovação.'}
-document.getElementById('preview').onclick=()=>{state.workflow='preview';document.getElementById('corpus').textContent='consultado';document.getElementById('similarity').textContent='sinal editorial';document.getElementById('safe').textContent='revisão necessária';render()};
-document.getElementById('draft').onclick=()=>{state.workflow='draft';render()};
+function render(){const workflow=state.workspace?.workflow?.state||'draft';const publicationAllowed=state.workspace ? canPublishWorkspace(state.workspace) : false;publish.disabled=workflow!=='approved' || !publicationAllowed || !canOperatorPublish(state.operator);publish.classList.toggle('blocked',publish.disabled);document.getElementById('approval').textContent=workflow==='approved'?'Aprovado — publicação liberada.':'Aguardando revisão e aprovação.'}
+document.getElementById('preview').onclick=()=>{if(!state.workspace)return;try{transitionWorkspace(state.workspace,'review');transitionWorkspace(state.workspace,'preview');}catch(e){document.getElementById('approval').textContent='Transição de prévia indisponível.';return;}document.getElementById('corpus').textContent='consultado';document.getElementById('similarity').textContent='sinal editorial';document.getElementById('safe').textContent='revisão necessária';render()};
+document.getElementById('draft').onclick=()=>{if(!state.workspace)return;const current=state.workspace.workflow.state;try{if(current==='review')transitionWorkspace(state.workspace,'draft');else if(current==='preview')transitionWorkspace(state.workspace,'review');else if(current==='approved')transitionWorkspace(state.workspace,'preview');render();}catch(e){document.getElementById('approval').textContent='Não foi possível retornar o workspace.';}};
 const approve=document.createElement('button');
 approve.className='btn secondary';
 approve.id='approve';
@@ -78,13 +79,14 @@ document.querySelector('.actions').insertBefore(approve,publish);
 approve.onclick=()=>{
   try {
     grantPublishCapability(state.operator);
-    state.workflow='approved';
+    if(!state.workspace) throw new Error('workspace_required');
+    transitionWorkspace(state.workspace,'approved');
     render();
   } catch(e) {
     document.getElementById('approval').textContent='Aprovação explícita necessária.';
   }
 };
-publish.onclick=()=>{if(state.workflow==='approved')alert('Publicação ainda requer confirmação explícita do usuário.')};
+publish.onclick=()=>{if(canPublishWorkspace(state.workspace) && canOperatorPublish(state.operator))alert('Publicação ainda requer confirmação explícita do usuário.')};
 render();
 </script>
 </body>
