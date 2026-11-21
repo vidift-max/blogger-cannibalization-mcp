@@ -48,9 +48,9 @@ if(documentType==='page') articleOnly.hidden=true;
 document.querySelector('.nav.active').textContent=documentType==='page'?'Páginas':'Artigos';
 const STORAGE_KEY='bsi:content-workspace:'+documentType;
 const state={workspace:null, documentType, operator:createOperatorSession({remote:true})};
-function saveWorkspace(){if(state.workspace) localStorage.setItem(STORAGE_KEY,JSON.stringify(state.workspace));}
-function loadWorkspace(){try{const raw=localStorage.getItem(STORAGE_KEY);return raw?JSON.parse(raw):null;}catch(e){return null;}}
-function hydrateWorkspace(workspace){if(!workspace)return false;state.workspace=workspace;titleInput.value=workspace.document.title;document.getElementById('content').innerHTML=workspace.document.content_html||'<p>Sem blocos de conteúdo extraíveis.</p>';importStatus.textContent='Rascunho recuperado deste navegador.';render();return true;}
+function saveWorkspace(){if(state.workspace)localStorage.setItem(STORAGE_KEY,JSON.stringify(state.workspace));}
+function loadWorkspace(){try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw)return null;const workspace=JSON.parse(raw);if(!workspace||workspace.version!==1||!workspace.document||!workspace.workflow||!Array.isArray(workspace.sections))return null;return workspace;}catch(e){return null;}}
+function hydrateWorkspace(workspace){if(!workspace)return false;state.workspace=workspace;state.operator=createOperatorSession({remote:true});titleInput.value=workspace.document.title;document.getElementById('content').innerHTML=workspace.document.content_html||'<p>Sem blocos de conteúdo extraíveis.</p>';importStatus.textContent='Rascunho recuperado deste navegador; autorização de publicação não foi recuperada.';render();return true;}
 const importButton=document.getElementById('importClaude');
 const importFile=document.getElementById('claudeHtml');
 const importStatus=document.getElementById('importStatus');
