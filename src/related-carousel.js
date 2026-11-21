@@ -51,6 +51,10 @@ export function selectRelatedCarousel({
     .map(candidate => {
       const titleScore = overlap(article?.title, candidate.title);
       const topicScore = overlap(article?.primary_topic, candidate.primary_topic);
+      const sameIntentPenalty =
+        article?.search_intent && candidate?.search_intent &&
+        article.search_intent === candidate.search_intent ? 0.12 : 0;
+
       const labelScore = overlap(
         Array.isArray(article?.labels) ? article.labels.join(' ') : '',
         Array.isArray(candidate.labels) ? candidate.labels.join(' ') : ''
@@ -59,7 +63,8 @@ export function selectRelatedCarousel({
       const score =
         titleScore * 0.45 +
         topicScore * 0.40 +
-        labelScore * 0.15;
+        labelScore * 0.15 -
+        sameIntentPenalty;
 
       return {
         ...candidate,
