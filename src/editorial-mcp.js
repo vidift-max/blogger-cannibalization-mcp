@@ -139,9 +139,15 @@ export async function handleEditorialMcp(req, res) {
     transport.close();
   });
 
-  await createServer().connect(transport);
-
-  await transport.handleRequest(req, res, req.body);
+  try {
+    await createServer().connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    console.error('[editorial-mcp]', error?.message || 'request_failed');
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'editorial_mcp_internal_error' });
+    }
+  }
 }
 
 export async function getEditorialMcpConfig() {
