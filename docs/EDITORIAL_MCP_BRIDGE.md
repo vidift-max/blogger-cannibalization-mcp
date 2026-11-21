@@ -91,6 +91,7 @@ The bridge requires two Render environment variables on the deployed service:
 
 - `MCP_EDITORIAL_TOKEN`: a strong secret bearer token; never commit or place it in source control.
 - `MCP_EDITORIAL_BLOG_ID`: the single Blogger blog ID that this bridge is allowed to query.
+- `MCP_EDITORIAL_ALLOWED_ORIGINS`: optional comma-separated browser origins. If an `Origin` header is present, it must match one of these values; requests without an `Origin` header remain allowed for non-browser MCP clients.
 
 Configuration is intentionally deployment-scoped. The bridge does not accept a blog ID from the MCP caller, preventing a caller from selecting another tenant's corpus.
 
