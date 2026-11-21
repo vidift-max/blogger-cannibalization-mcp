@@ -72,3 +72,15 @@ test('consulta formada apenas por palavras comuns não seleciona documentos', ()
   const result = selectEditorialContext(corpus, 'what is this for you and your');
   assert.deepEqual(result, []);
 });
+
+
+test('preserva siglas financeiras curtas na seleção editorial', () => {
+  const result = selectEditorialContext([
+    { id: 1, title: 'IRA contribution limits', content_text: 'Updated IRS guidance for IRA accounts.' },
+    { id: 2, title: 'Home buying guide', content_text: 'Mortgage and property basics.' }
+  ], 'IRS rules for IRA');
+
+  assert.deepEqual(result.map(item => item.id), [1]);
+  assert.ok(result[0].matched_terms.includes('irs'));
+  assert.ok(result[0].matched_terms.includes('ira'));
+});
