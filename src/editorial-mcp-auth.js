@@ -40,6 +40,14 @@ export function authorizeEditorialMcpRequest(req, env = process.env) {
   );
 }
 
+export function editorialUseWarning(status) {
+  if (status === 'fresh') return null;
+  if (status === 'stale') {
+    return 'Corpus is stale. Verify existing Blogger content before relying on this brief or choosing a new angle.';
+  }
+  return 'Corpus freshness is unknown. Synchronize Blogger content before relying on this brief or making cannibalization decisions.';
+}
+
 export function syncAgeSeconds(syncedAt, now = Date.now()) {
   if (!syncedAt) return null;
   const ms = now - new Date(syncedAt).getTime();
