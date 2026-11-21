@@ -10,8 +10,15 @@ import { normalizeInteractions } from './interaction-catalog.js';
 export function normalizeProviderArticle(value) {
   const validation = validateProviderOutput(value);
 
-  if (!validation.valid) {
-    return { ok: false, errors: validation.errors };
+  const hasValidBlock = Array.isArray(value.blocks) && value.blocks.some(block =>
+    block && CONTENT_BLOCK_TYPES.includes(block.type)
+  );
+  const blockingErrors = validation.errors.filter(error =>
+    !error.startsWith('unsupported_block_type:') || !hasValidBlock
+  );
+
+  if (blockingErrors.length) {
+    return { ok: false, errors: blockingErrors };
   }
 
   const blocks = value.blocks
