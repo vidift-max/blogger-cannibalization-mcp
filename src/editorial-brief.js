@@ -25,6 +25,7 @@ function buildEditorialBrief({ corpus, query, sourceTitle = '', limit = 8 }) {
     findings
       .filter(finding => finding.risk === 'HIGH')
       .flatMap(finding => (finding.posts || []).map(post => String(post.id)))
+      .filter(id => relevantIds.has(id))
   )];
 
   const occupiedTopics = [
