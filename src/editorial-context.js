@@ -3,7 +3,7 @@
  * for editorial/anti-cannibalization decisions.
  */
 
-const SHORT_FINANCIAL_TERMS = new Set(['apr', 'ira', 'irs', 'fha', 'fed', 'ssa']);
+const SHORT_FINANCIAL_TERMS = new Set(['apr', 'apy', 'ira', 'irs', 'fha', 'fed', 'ssa', 'hsa', 'gdp', '529']);
 
 const STOP_WORDS = new Set(`
 the a an and or for to of in on with from by is are was were be been being
