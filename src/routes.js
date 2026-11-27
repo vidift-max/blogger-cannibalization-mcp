@@ -1311,7 +1311,10 @@ router.post('/proposals/:id/approve', currentUser, requireCsrf, async (req, res,
     }
 
     writeStarted = true;
-    await updatePost(auth, row.blogger_blog_id, row.blogger_post_id, row.proposed_html);
+    await updatePost(auth, row.blogger_blog_id, row.blogger_post_id, row.proposed_html, {
+      updated: row.local_updated_at,
+      content: row.previous_html
+    });
 
     await client.query('BEGIN');
     const finalized = await client.query(
@@ -1371,7 +1374,9 @@ router.post('/proposals/:id/restore', currentUser, requireCsrf, async (req, res,
 
     const auth = await authForUser(req.user.id);
     writeStarted = true;
-    await updatePost(auth, row.blogger_blog_id, row.blogger_post_id, row.previous_html);
+    await updatePost(auth, row.blogger_blog_id, row.blogger_post_id, row.previous_html, {
+      content: row.proposed_html
+    });
 
     await client.query('BEGIN');
     const finalized = await client.query(

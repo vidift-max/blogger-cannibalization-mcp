@@ -121,20 +121,47 @@ export async function getPost(auth, blogId, postId) {
   ).data;
 }
 
-export async function updatePost(auth, blogId, postId, html) {
+export async function updatePost(auth, blogId, postId, html, expected = {}) {
   const api = google.blogger({ version: 'v3', auth });
 
   const existing = await api.posts.get({
     blogId,
     postId
   });
+  const current = existing.data;
+
+  if (expected.content !== undefined && String(current.content || '') !== expected.content) {
+    const error = new Error('O HTML do artigo mudou no Blogger desde a revisão.');
+    error.code = 'BLOGGER_POST_CHANGED';
+    throw error;
+  }
+
+  if (expected.updated !== undefined) {
+    const currentTime = current.updated ? new Date(current.updated).getTime() : NaN;
+    const expectedTime = expected.updated ? new Date(expected.updated).getTime() : NaN;
+    if (!Number.isFinite(currentTime) || !Number.isFinite(expectedTime) || currentTime !== expectedTime) {
+      const error = new Error('A versão do artigo mudou no Blogger desde a sincronização.');
+      error.code = 'BLOGGER_POST_CHANGED';
+      throw error;
+    }
+  }
+
+  if (!current.etag) {
+    const error = new Error('O Blogger não forneceu ETag; atualização condicional recusada.');
+    error.code = 'BLOGGER_ETAG_MISSING';
+    throw error;
+  }
 
   return api.posts.update({
     blogId,
     postId,
     requestBody: {
-      ...existing.data,
+      ...current,
       content: html
+    }
+  }, {
+    headers: {
+      'If-Match': current.etag
     }
   });
 }

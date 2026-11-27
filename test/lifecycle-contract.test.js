@@ -49,3 +49,12 @@ test('proposal interface exposes restore and reconciliation actions', () => {
   assert.ok(ui.includes("performAction('reconcile')"));
   assert.ok(ui.includes("Requer reconciliação"));
 });
+
+
+test('Blogger writes require an unchanged snapshot and HTTP If-Match ETag', async () => {
+  const blogger = await readFile(new URL('../src/blogger.js', import.meta.url), 'utf8');
+  assert.match(blogger, /expected\.content/);
+  assert.match(blogger, /expected\.updated/);
+  assert.match(blogger, /'If-Match': current\.etag/);
+  assert.match(blogger, /BLOGGER_ETAG_MISSING/);
+});

@@ -47,3 +47,6 @@ A interface de propostas oferece visualização, rejeição, aprovação explíc
 ## Migrações
 
 Migrações SQL numeradas em db/migrations/ são aplicadas em ordem e registradas em schema_migrations. Um advisory lock do PostgreSQL impede que duas instâncias executem a mesma migração simultaneamente.
+
+
+Antes de enviar uma alteração ou restauração, a integração busca novamente o recurso e verifica o conteúdo esperado; a atualização usa o ETag remoto com o cabeçalho HTTP If-Match. Se a versão remota mudou, a operação falha fechada e entra em reconciliação.
