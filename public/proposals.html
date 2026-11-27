@@ -213,6 +213,7 @@ async function loadProposals() {
     const pending = proposals.filter(p => p.status === 'pending').length;
     const applied = proposals.filter(p => p.status === 'applied').length;
     const rejected = proposals.filter(p => p.status === 'rejected').length;
+    const reconciliation = proposals.filter(p => p.status === 'reconciliation_required').length;
 
     const totalChanges = proposals.reduce((sum, p) => {
       const count = Number(p.change_count);
@@ -224,6 +225,7 @@ async function loadProposals() {
       ' | Pendentes: ' + pending +
       ' | Publicadas: ' + applied +
       ' | Rejeitadas: ' + rejected +
+      ' | Requer reconciliação: ' + reconciliation +
       ' | Trechos alterados: ' + totalChanges;
 
     renderProposals();

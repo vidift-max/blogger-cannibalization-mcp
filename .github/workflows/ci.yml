@@ -18,5 +18,5 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Syntax check
         run: npm run check
-      - name: Unit tests
+      - name: Unit and contract tests
         run: npm test
