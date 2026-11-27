@@ -1311,7 +1311,7 @@ router.post('/proposals/:id/approve', currentUser, requireCsrf, async (req, res,
     }
 
     writeStarted = true;
-    await updatePost(auth, row.blogger_blog_id, row.blogger_post_id, row.proposed_html, {
+    const remoteAfterApply = await updatePost(auth, row.blogger_blog_id, row.blogger_post_id, row.proposed_html, {
       updated: row.local_updated_at,
       content: row.previous_html
     });
@@ -1322,8 +1322,8 @@ router.post('/proposals/:id/approve', currentUser, requireCsrf, async (req, res,
       [row.id, req.user.id]
     );
     if (!finalized.rowCount) throw new Error('proposal_state_changed_after_remote_write');
-    await client.query('UPDATE posts SET content_html=$1, content_text=$2 WHERE id=$3 AND user_id=$4',
-      [row.proposed_html, stripHtml(row.proposed_html), row.post_id, req.user.id]);
+    await client.query('UPDATE posts SET content_html=$1, content_text=$2, updated_at=COALESCE($3,updated_at) WHERE id=$4 AND user_id=$5',
+      [row.proposed_html, stripHtml(row.proposed_html), remoteAfterApply.data?.updated || null, row.post_id, req.user.id]);
     await updateLinkedBatchStatus(client, row.id, 'published');
     await client.query('COMMIT');
     await audit(req.user.id, 'proposal_applied', { proposalId: row.id, postId: row.post_id }).catch(error => console.error('[audit-proposal-applied]', error.message));
@@ -1374,7 +1374,7 @@ router.post('/proposals/:id/restore', currentUser, requireCsrf, async (req, res,
 
     const auth = await authForUser(req.user.id);
     writeStarted = true;
-    await updatePost(auth, row.blogger_blog_id, row.blogger_post_id, row.previous_html, {
+    const remoteAfterRestore = await updatePost(auth, row.blogger_blog_id, row.blogger_post_id, row.previous_html, {
       content: row.proposed_html
     });
 
@@ -1384,8 +1384,8 @@ router.post('/proposals/:id/restore', currentUser, requireCsrf, async (req, res,
       [row.id, req.user.id]
     );
     if (!finalized.rowCount) throw new Error('restore_state_changed_after_remote_write');
-    await client.query('UPDATE posts SET content_html=$1, content_text=$2 WHERE id=$3 AND user_id=$4',
-      [row.previous_html, stripHtml(row.previous_html), row.post_id, req.user.id]);
+    await client.query('UPDATE posts SET content_html=$1, content_text=$2, updated_at=COALESCE($3,updated_at) WHERE id=$4 AND user_id=$5',
+      [row.previous_html, stripHtml(row.previous_html), remoteAfterRestore.data?.updated || null, row.post_id, req.user.id]);
     await updateLinkedBatchStatus(client, row.id, 'pending');
     await client.query('COMMIT');
     await audit(req.user.id, 'proposal_restored', { proposalId: row.id, postId: row.post_id }).catch(error => console.error('[audit-proposal-restored]', error.message));
@@ -1452,8 +1452,8 @@ router.post('/proposals/:id/reconcile', currentUser, requireCsrf, async (req, re
       "UPDATE post_backups SET status=$1, applied_at=CASE WHEN $1='applied' THEN COALESCE(applied_at,now()) ELSE applied_at END, restored_at=CASE WHEN $1='restored' THEN now() ELSE restored_at END, reconciliation_action=NULL, reconciliation_reason=NULL WHERE id=$2 AND user_id=$3 AND status='reconciling'",
       [finalStatus, row.id, req.user.id]
     );
-    await client.query('UPDATE posts SET content_html=$1, content_text=$2 WHERE id=$3 AND user_id=$4',
-      [finalHtml, stripHtml(finalHtml), row.post_id, req.user.id]);
+    await client.query('UPDATE posts SET content_html=$1, content_text=$2, updated_at=COALESCE($3,updated_at) WHERE id=$4 AND user_id=$5',
+      [finalHtml, stripHtml(finalHtml), live.updated || null, row.post_id, req.user.id]);
     await updateLinkedBatchStatus(client, row.id, finalStatus === 'applied' ? 'published' : 'pending');
     await client.query('COMMIT');
     await audit(req.user.id, 'proposal_reconciled', { proposalId: row.id, status: finalStatus }).catch(error => console.error('[audit-proposal-reconciled]', error.message));

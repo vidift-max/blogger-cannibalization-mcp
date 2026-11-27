@@ -58,3 +58,11 @@ test('Blogger writes require an unchanged snapshot and HTTP If-Match ETag', asyn
   assert.match(blogger, /'If-Match': current\.etag/);
   assert.match(blogger, /BLOGGER_ETAG_MISSING/);
 });
+
+
+test('successful remote transitions refresh the local Blogger version timestamp', async () => {
+  const routesSource = await readFile(new URL('../src/routes.js', import.meta.url), 'utf8');
+  assert.match(routesSource, /remoteAfterApply\.data\?\.updated/);
+  assert.match(routesSource, /remoteAfterRestore\.data\?\.updated/);
+  assert.match(routesSource, /live\.updated \|\| null/);
+});
