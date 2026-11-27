@@ -14,3 +14,13 @@ Melhorias em relação ao alpha.1:
 - `.env.example`, `.gitignore` e `.dockerignore` na raiz.
 
 Não implantado. Não conectado a banco de produção. Não validado com conta Blogger real.
+
+
+## Finalização técnica — branch de trabalho
+- Aprovação e restauração agora reivindicam um estado intermediário atômico antes de chamar o Blogger.
+- Resultados externos ambíguos entram em reconciliação; o endpoint compara o HTML remoto exatamente com original/proposta e não envia conteúdo.
+- Rotas de detalhe e rejeição foram adicionadas para corresponder à interface existente.
+- Contadores de lotes são atualizados quando propostas são publicadas, rejeitadas ou restauradas.
+- Migrações SQL passam a ser versionadas e executadas uma única vez com lock advisory.
+- Verificação sintática cobre todos os módulos e há workflow de CI.
+- Ainda requer CI verde, teste de integração com Blogger de teste e validação operacional do banco antes de produção.

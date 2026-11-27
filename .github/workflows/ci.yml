@@ -1,0 +1,22 @@
+name: Blogger SEO Intelligence CI
+
+on:
+  pull_request:
+    branches: [v2-saas-alpha]
+  push:
+    branches: [fix/seo-intelligence-finalization-10-rounds]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Syntax check
+        run: npm run check
+      - name: Unit and contract tests
+        run: npm test

@@ -1015,6 +1015,13 @@ router.post(
           html
         );
 
+      if (changeCount === 0) {
+        return res.status(400).json({
+          error: 'no_changes_detected',
+          message: 'A proposta é idêntica ao HTML original.'
+        });
+      }
+
       const b = await query(
         `INSERT INTO post_backups(
           user_id,
@@ -1175,6 +1182,8 @@ router.get(
           pb.change_count,
           pb.created_at,
           pb.applied_at,
+          pb.reconciliation_action,
+          pb.reconciliation_reason,
           p.title,
           p.url
          FROM post_backups pb
@@ -1202,310 +1211,258 @@ router.get(
 
 
 /*
- * ============================================================
- * APROVAÇÃO MANUAL DE PROPOSTA
- * ============================================================
- *
- * IMPORTANTE:
- * Esta é a única parte que efetivamente envia uma alteração
- * ao Blogger.
- *
- * Continua exigindo:
- * - usuário autenticado;
- * - CSRF;
- * - proposta pendente;
- * - confirmação explícita através da ação de aprovação.
- * ============================================================
+ * Proposal lifecycle: all external writes are claimed atomically first.
  */
+async function updateLinkedBatchStatus(db, proposalId, status) {
+  const linked = await db.query(
+    'UPDATE correction_batch_items SET status=$1, updated_at=now() WHERE proposal_id=$2 RETURNING batch_id',
+    [status, proposalId]
+  );
+  for (const batchId of [...new Set(linked.rows.map(row => String(row.batch_id)))]) {
+    await db.query(
+      "UPDATE correction_batches cb SET total_items=(SELECT COUNT(*) FROM correction_batch_items WHERE batch_id=$1), pending_items=(SELECT COUNT(*) FROM correction_batch_items WHERE batch_id=$1 AND status='pending'), approved_items=(SELECT COUNT(*) FROM correction_batch_items WHERE batch_id=$1 AND status='approved'), published_items=(SELECT COUNT(*) FROM correction_batch_items WHERE batch_id=$1 AND status='published'), rejected_items=(SELECT COUNT(*) FROM correction_batch_items WHERE batch_id=$1 AND status='rejected'), updated_at=now() WHERE cb.id=$1",
+      [batchId]
+    );
+  }
+}
 
-router.post(
-  '/proposals/:id/approve',
-  currentUser,
-  requireCsrf,
-  async (req, res, next) => {
-    const client =
-      await pool.connect();
+async function markProposalReconciliation(proposalId, userId, action, reason) {
+  await query(
+    "UPDATE post_backups SET status='reconciliation_required', reconciliation_action=$1, reconciliation_reason=$2 WHERE id=$3 AND user_id=$4 AND status IN ('applying','restoring','reconciling')",
+    [action, String(reason || 'remote_result_uncertain').slice(0, 500), proposalId, userId]
+  );
+}
 
-    let row;
+router.get('/proposals/:id', currentUser, async (req, res, next) => {
+  try {
+    const result = await query(
+      'SELECT pb.id,pb.user_id,pb.post_id,pb.previous_html,pb.proposed_html,pb.change_count,pb.status,pb.created_at,pb.applied_at,pb.restored_at,pb.reconciliation_action,pb.reconciliation_reason,p.title,p.url,p.blogger_post_id,p.updated_at AS local_updated_at,b.blogger_blog_id FROM post_backups pb JOIN posts p ON p.id=pb.post_id JOIN blogs b ON b.id=p.blog_id WHERE pb.id=$1 AND pb.user_id=$2 AND p.user_id=$2 AND b.user_id=$2',
+      [req.params.id, req.user.id]
+    );
+    if (!result.rowCount) return res.status(404).json({ error: 'proposal_not_found' });
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ proposal: result.rows[0] });
+  } catch (error) { next(error); }
+});
 
-    try {
-      await client.query(
-        'BEGIN'
-      );
+router.post('/proposals/:id/reject', currentUser, requireCsrf, async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      "UPDATE post_backups SET status='rejected', reconciliation_action=NULL, reconciliation_reason=NULL WHERE id=$1 AND user_id=$2 AND status='pending' RETURNING id",
+      [req.params.id, req.user.id]
+    );
+    if (!result.rowCount) {
+      const exists = await client.query('SELECT 1 FROM post_backups WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+      await client.query('ROLLBACK');
+      return res.status(exists.rowCount ? 409 : 404).json({ error: exists.rowCount ? 'proposal_not_pending' : 'proposal_not_found' });
+    }
+    await updateLinkedBatchStatus(client, req.params.id, 'rejected');
+    await client.query('COMMIT');
+    await audit(req.user.id, 'proposal_rejected', { proposalId: req.params.id }).catch(error => console.error('[audit-proposal-rejected]', error.message));
+    res.json({ ok: true, proposalId: req.params.id });
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    next(error);
+  } finally { client.release(); }
+});
 
-      const p =
-        await client.query(
-          `SELECT
-            pb.*,
-            p.blogger_post_id,
-            p.updated_at AS local_updated_at,
-            b.blogger_blog_id
-           FROM post_backups pb
-           JOIN posts p
-             ON p.id=pb.post_id
-           JOIN blogs b
-             ON b.id=p.blog_id
-           WHERE pb.id=$1
-             AND pb.user_id=$2
-             AND p.user_id=$2
-             AND b.user_id=$2
-           FOR UPDATE`,
-          [
-            req.params.id,
-            req.user.id
-          ]
-        );
+router.post('/proposals/:id/approve', currentUser, requireCsrf, async (req, res, next) => {
+  const client = await pool.connect();
+  let row;
+  let writeStarted = false;
+  try {
+    await client.query('BEGIN');
+    const selected = await client.query(
+      'SELECT pb.*,p.blogger_post_id,p.updated_at AS local_updated_at,b.blogger_blog_id FROM post_backups pb JOIN posts p ON p.id=pb.post_id JOIN blogs b ON b.id=p.blog_id WHERE pb.id=$1 AND pb.user_id=$2 AND p.user_id=$2 AND b.user_id=$2 FOR UPDATE OF pb',
+      [req.params.id, req.user.id]
+    );
+    if (!selected.rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'proposal_not_found' });
+    }
+    row = selected.rows[0];
+    if (row.status !== 'pending') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'proposal_not_pending', status: row.status });
+    }
+    const claimed = await client.query(
+      "UPDATE post_backups SET status='applying', reconciliation_action='apply', reconciliation_reason=NULL WHERE id=$1 AND user_id=$2 AND status='pending' RETURNING id",
+      [row.id, req.user.id]
+    );
+    if (!claimed.rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'proposal_not_pending' });
+    }
+    await client.query('COMMIT');
 
-      if (!p.rowCount) {
-        await client.query(
-          'ROLLBACK'
-        );
-
-        return res.status(404).json({
-          error:
-            'proposal_not_found'
-        });
-      }
-
-      row =
-        p.rows[0];
-
-      if (
-        row.status !== 'pending'
-      ) {
-        await client.query(
-          'ROLLBACK'
-        );
-
-        return res.status(409).json({
-          error:
-            'proposal_not_pending'
-        });
-      }
-
-      await client.query(
-        `UPDATE post_backups
-         SET status=$1
-         WHERE id=$2
-           AND user_id=$3`,
-        [
-          'pending',
-          row.id,
-          req.user.id
-        ]
-      );
-
-      await client.query(
-        'COMMIT'
-      );
-
-      const auth =
-        await authForUser(
-          req.user.id
-        );
-
-      const live =
-        await getPost(
-          auth,
-          row.blogger_blog_id,
-          row.blogger_post_id
-        );
-
-      if (
-        row.local_updated_at &&
-        live.updated &&
-        new Date(live.updated) >
-          new Date(row.local_updated_at)
-      ) {
-        return res.status(409).json({
-          error:
-            'blogger_post_changed',
-
-          message:
-            'O artigo mudou no Blogger desde a última sincronização. Sincronize novamente antes de aprovar.'
-        });
-      }
-
-      await updatePost(
-        auth,
-        row.blogger_blog_id,
-        row.blogger_post_id,
-        row.proposed_html
-      );
-
-      await query(
-        `UPDATE post_backups
-         SET status='applied',
-             applied_at=now()
-         WHERE id=$1
-           AND user_id=$2
-           AND status='pending'`,
-        [
-          row.id,
-          req.user.id
-        ]
-      );
-
-      await query(
-        `UPDATE posts
-         SET content_html=$1,
-             content_text=$2
-         WHERE id=$3
-           AND user_id=$4`,
-        [
-          row.proposed_html,
-          stripHtml(
-            row.proposed_html
-          ),
-          row.post_id,
-          req.user.id
-        ]
-      );
-
-      await audit(
-        req.user.id,
-        'proposal_applied',
-        {
-          proposalId:
-            row.id,
-          postId:
-            row.post_id
-        }
-      );
-
-      res.json({
-        ok: true,
-        backupId:
-          row.id
+    const auth = await authForUser(req.user.id);
+    const live = await getPost(auth, row.blogger_blog_id, row.blogger_post_id);
+    const localTime = row.local_updated_at ? new Date(row.local_updated_at).getTime() : NaN;
+    const remoteTime = live.updated ? new Date(live.updated).getTime() : NaN;
+    if (!Number.isFinite(localTime) || !Number.isFinite(remoteTime) || localTime !== remoteTime) {
+      await markProposalReconciliation(row.id, req.user.id, 'apply', 'blogger_post_changed_before_apply');
+      return res.status(409).json({
+        error: 'blogger_post_changed',
+        status: 'reconciliation_required',
+        message: 'A versão remota não corresponde exatamente à última sincronização local. Revise e reconcilie antes de tentar novamente.'
       });
+    }
 
-    } catch (e) {
+    writeStarted = true;
+    const remoteAfterApply = await updatePost(auth, row.blogger_blog_id, row.blogger_post_id, row.proposed_html, {
+      updated: row.local_updated_at,
+      content: row.previous_html
+    });
+
+    await client.query('BEGIN');
+    const finalized = await client.query(
+      "UPDATE post_backups SET status='applied', applied_at=now(), reconciliation_action=NULL, reconciliation_reason=NULL WHERE id=$1 AND user_id=$2 AND status='applying' RETURNING id",
+      [row.id, req.user.id]
+    );
+    if (!finalized.rowCount) throw new Error('proposal_state_changed_after_remote_write');
+    await client.query('UPDATE posts SET content_html=$1, content_text=$2, updated_at=COALESCE($3,updated_at) WHERE id=$4 AND user_id=$5',
+      [row.proposed_html, stripHtml(row.proposed_html), remoteAfterApply.data?.updated || null, row.post_id, req.user.id]);
+    await updateLinkedBatchStatus(client, row.id, 'published');
+    await client.query('COMMIT');
+    await audit(req.user.id, 'proposal_applied', { proposalId: row.id, postId: row.post_id }).catch(error => console.error('[audit-proposal-applied]', error.message));
+    res.json({ ok: true, backupId: row.id, status: 'applied' });
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    if (row?.id) {
       try {
-        await client.query(
-          'ROLLBACK'
-        );
-      } catch {}
-
-      next(e);
-
-    } finally {
-      client.release();
-    }
-  }
-);
-
-
-/*
- * ============================================================
- * RESTAURAÇÃO DE BACKUP
- * ============================================================
- */
-
-router.post(
-  '/proposals/:id/restore',
-  currentUser,
-  requireCsrf,
-  async (req, res, next) => {
-    try {
-      const r = await query(
-        `SELECT
-          pb.*,
-          p.blogger_post_id,
-          b.blogger_blog_id
-         FROM post_backups pb
-         JOIN posts p
-           ON p.id=pb.post_id
-         JOIN blogs b
-           ON b.id=p.blog_id
-         WHERE pb.id=$1
-           AND pb.user_id=$2
-           AND p.user_id=$2
-           AND b.user_id=$2`,
-        [
-          req.params.id,
-          req.user.id
-        ]
-      );
-
-      if (!r.rowCount) {
-        return res.status(404).json({
-          error:
-            'backup_not_found'
-        });
-      }
-
-      const row =
-        r.rows[0];
-
-      if (
-        row.status !== 'applied'
-      ) {
-        return res.status(409).json({
-          error:
-            'backup_not_applied'
-        });
-      }
-
-      const auth =
-        await authForUser(
-          req.user.id
-        );
-
-      await updatePost(
-        auth,
-        row.blogger_blog_id,
-        row.blogger_post_id,
-        row.previous_html
-      );
-
-      await query(
-        `UPDATE post_backups
-         SET status='restored',
-             restored_at=now()
-         WHERE id=$1
-           AND user_id=$2
-           AND status='applied'`,
-        [
-          row.id,
-          req.user.id
-        ]
-      );
-
-      await query(
-        `UPDATE posts
-         SET content_html=$1,
-             content_text=$2
-         WHERE id=$3
-           AND user_id=$4`,
-        [
-          row.previous_html,
-          stripHtml(
-            row.previous_html
-          ),
-          row.post_id,
-          req.user.id
-        ]
-      );
-
-      await audit(
-        req.user.id,
-        'proposal_restored',
-        {
-          proposalId:
-            row.id,
-          postId:
-            row.post_id
+        if (writeStarted) {
+          await markProposalReconciliation(row.id, req.user.id, 'apply', 'apply_result_uncertain');
+        } else {
+          await query("UPDATE post_backups SET status='pending', reconciliation_action=NULL, reconciliation_reason=NULL WHERE id=$1 AND user_id=$2 AND status='applying'", [row.id, req.user.id]);
         }
-      );
-
-      res.json({
-        ok: true,
-        restoredBackupId:
-          row.id
-      });
-
-    } catch (e) {
-      next(e);
+      } catch (stateError) { console.error('[proposal-state-recovery]', stateError.message); }
     }
-  }
-);
+    next(error);
+  } finally { client.release(); }
+});
+
+router.post('/proposals/:id/restore', currentUser, requireCsrf, async (req, res, next) => {
+  const client = await pool.connect();
+  let row;
+  let writeStarted = false;
+  try {
+    await client.query('BEGIN');
+    const selected = await client.query(
+      'SELECT pb.*,p.blogger_post_id,b.blogger_blog_id FROM post_backups pb JOIN posts p ON p.id=pb.post_id JOIN blogs b ON b.id=p.blog_id WHERE pb.id=$1 AND pb.user_id=$2 AND p.user_id=$2 AND b.user_id=$2 FOR UPDATE OF pb',
+      [req.params.id, req.user.id]
+    );
+    if (!selected.rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'backup_not_found' });
+    }
+    row = selected.rows[0];
+    if (row.status !== 'applied') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'backup_not_applied', status: row.status });
+    }
+    const claimed = await client.query(
+      "UPDATE post_backups SET status='restoring', reconciliation_action='restore', reconciliation_reason=NULL WHERE id=$1 AND user_id=$2 AND status='applied' RETURNING id",
+      [row.id, req.user.id]
+    );
+    if (!claimed.rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'backup_not_applied' });
+    }
+    await client.query('COMMIT');
+
+    const auth = await authForUser(req.user.id);
+    writeStarted = true;
+    const remoteAfterRestore = await updatePost(auth, row.blogger_blog_id, row.blogger_post_id, row.previous_html, {
+      content: row.proposed_html
+    });
+
+    await client.query('BEGIN');
+    const finalized = await client.query(
+      "UPDATE post_backups SET status='restored', restored_at=now(), reconciliation_action=NULL, reconciliation_reason=NULL WHERE id=$1 AND user_id=$2 AND status='restoring' RETURNING id",
+      [row.id, req.user.id]
+    );
+    if (!finalized.rowCount) throw new Error('restore_state_changed_after_remote_write');
+    await client.query('UPDATE posts SET content_html=$1, content_text=$2, updated_at=COALESCE($3,updated_at) WHERE id=$4 AND user_id=$5',
+      [row.previous_html, stripHtml(row.previous_html), remoteAfterRestore.data?.updated || null, row.post_id, req.user.id]);
+    await updateLinkedBatchStatus(client, row.id, 'pending');
+    await client.query('COMMIT');
+    await audit(req.user.id, 'proposal_restored', { proposalId: row.id, postId: row.post_id }).catch(error => console.error('[audit-proposal-restored]', error.message));
+    res.json({ ok: true, restoredBackupId: row.id, status: 'restored' });
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    if (row?.id) {
+      try {
+        if (writeStarted) {
+          await markProposalReconciliation(row.id, req.user.id, 'restore', 'restore_result_uncertain');
+        } else {
+          await query("UPDATE post_backups SET status='applied', reconciliation_action=NULL, reconciliation_reason=NULL WHERE id=$1 AND user_id=$2 AND status='restoring'", [row.id, req.user.id]);
+        }
+      } catch (stateError) { console.error('[restore-state-recovery]', stateError.message); }
+    }
+    next(error);
+  } finally { client.release(); }
+});
+
+router.post('/proposals/:id/reconcile', currentUser, requireCsrf, async (req, res, next) => {
+  const client = await pool.connect();
+  let row;
+  try {
+    await client.query('BEGIN');
+    const selected = await client.query(
+      'SELECT pb.*,p.blogger_post_id,b.blogger_blog_id FROM post_backups pb JOIN posts p ON p.id=pb.post_id JOIN blogs b ON b.id=p.blog_id WHERE pb.id=$1 AND pb.user_id=$2 AND p.user_id=$2 AND b.user_id=$2 FOR UPDATE OF pb',
+      [req.params.id, req.user.id]
+    );
+    if (!selected.rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'proposal_not_found' });
+    }
+    row = selected.rows[0];
+    if (row.status !== 'reconciliation_required') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'reconciliation_not_required', status: row.status });
+    }
+    await client.query("UPDATE post_backups SET status='reconciling' WHERE id=$1 AND user_id=$2", [row.id, req.user.id]);
+    await client.query('COMMIT');
+
+    const auth = await authForUser(req.user.id);
+    const live = await getPost(auth, row.blogger_blog_id, row.blogger_post_id);
+    const remoteHtml = String(live.content || '');
+    let finalStatus = null;
+    let finalHtml = null;
+    if (row.reconciliation_action === 'apply') {
+      if (remoteHtml === row.proposed_html) { finalStatus = 'applied'; finalHtml = row.proposed_html; }
+      else if (remoteHtml === row.previous_html) { finalStatus = 'pending'; finalHtml = row.previous_html; }
+    } else if (row.reconciliation_action === 'restore') {
+      if (remoteHtml === row.previous_html) { finalStatus = 'restored'; finalHtml = row.previous_html; }
+      else if (remoteHtml === row.proposed_html) { finalStatus = 'applied'; finalHtml = row.proposed_html; }
+    }
+    if (!finalStatus) {
+      await query("UPDATE post_backups SET status='reconciliation_required', reconciliation_reason='remote_content_diverged' WHERE id=$1 AND user_id=$2 AND status='reconciling'", [row.id, req.user.id]);
+      return res.status(409).json({
+        error: 'remote_content_diverged',
+        status: 'reconciliation_required',
+        message: 'O HTML remoto não corresponde exatamente ao original nem à proposta. Nenhuma alteração foi feita; é necessária revisão manual.'
+      });
+    }
+
+    await client.query('BEGIN');
+    await client.query(
+      "UPDATE post_backups SET status=$1, applied_at=CASE WHEN $1='applied' THEN COALESCE(applied_at,now()) ELSE applied_at END, restored_at=CASE WHEN $1='restored' THEN now() ELSE restored_at END, reconciliation_action=NULL, reconciliation_reason=NULL WHERE id=$2 AND user_id=$3 AND status='reconciling'",
+      [finalStatus, row.id, req.user.id]
+    );
+    await client.query('UPDATE posts SET content_html=$1, content_text=$2, updated_at=COALESCE($3,updated_at) WHERE id=$4 AND user_id=$5',
+      [finalHtml, stripHtml(finalHtml), live.updated || null, row.post_id, req.user.id]);
+    await updateLinkedBatchStatus(client, row.id, finalStatus === 'applied' ? 'published' : 'pending');
+    await client.query('COMMIT');
+    await audit(req.user.id, 'proposal_reconciled', { proposalId: row.id, status: finalStatus }).catch(error => console.error('[audit-proposal-reconciled]', error.message));
+    res.json({ ok: true, status: finalStatus, message: 'Estado confirmado pela comparação exata do HTML no Blogger.' });
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    if (row?.id) {
+      await query("UPDATE post_backups SET status='reconciliation_required' WHERE id=$1 AND user_id=$2 AND status='reconciling'", [row.id, req.user.id]).catch(() => {});
+    }
+    next(error);
+  } finally { client.release(); }
+});

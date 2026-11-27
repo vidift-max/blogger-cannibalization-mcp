@@ -32,3 +32,21 @@ Esta é uma reconstrução alpha corrigida, não a versão original que a ferram
 - O algoritmo de similaridade não comprova canibalização; integrar Search Console e análise de intenção de busca antes de decisões automáticas.
 
 Nunca publique alterações automaticamente. Nunca coloque `.env`, tokens, client secret ou chave de criptografia no GitHub.
+
+
+## Ciclo seguro de propostas
+
+As propostas seguem os estados **pending**, **applying**, **applied**, **restoring**, **restored**, **rejected** e **reconciliation_required**.
+
+A aprovação e a restauração reivindicam o estado no PostgreSQL antes de chamar o Blogger, impedindo duas solicitações concorrentes de executar a mesma transição. Se o resultado de uma chamada externa for ambíguo, a proposta fica bloqueada para nova escrita até a reconciliação.
+
+A reconciliação (POST /api/proposals/:id/reconcile) apenas consulta o Blogger. Ela compara o HTML remoto, sem normalização, com o HTML original e o HTML proposto salvos no backup. Se não houver correspondência exata, o sistema mantém o bloqueio e exige revisão manual.
+
+A interface de propostas oferece visualização, rejeição, aprovação explícita, restauração e reconciliação. A restauração só está disponível para propostas aplicadas.
+
+## Migrações
+
+Migrações SQL numeradas em db/migrations/ são aplicadas em ordem e registradas em schema_migrations. Um advisory lock do PostgreSQL impede que duas instâncias executem a mesma migração simultaneamente.
+
+
+Antes de enviar uma alteração ou restauração, a integração busca novamente o recurso e verifica o conteúdo esperado; a atualização usa o ETag remoto com o cabeçalho HTTP If-Match. Se a versão remota mudou, a operação falha fechada e entra em reconciliação.

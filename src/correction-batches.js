@@ -315,10 +315,11 @@ export function createCorrectionBatchesRouter({
             ON pb.id=cbi.proposal_id
 
           WHERE cbi.batch_id=$1
+            AND p.user_id=$2
 
           ORDER BY cbi.created_at ASC
           `,
-          [batchId]
+          [batchId, req.user.id]
         );
 
         res.json({
@@ -591,8 +592,7 @@ export function createCorrectionBatchesRouter({
               previousProposal.rows[0].status;
 
             if (
-              previousStatus === 'pending' ||
-              previousStatus === 'applied'
+              ['pending', 'applying', 'applied', 'restoring', 'reconciling', 'reconciliation_required'].includes(previousStatus)
             ) {
               await client.query('ROLLBACK');
 
